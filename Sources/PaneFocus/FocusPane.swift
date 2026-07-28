@@ -52,7 +52,9 @@ public final class FocusPane: NotchPane {
         self.init(store: UserDefaultsFocusStore())
     }
 
-    init(
+    /// The seam. The clock is injected rather than read, so the sleep, wake and boundary
+    /// behaviour can be exercised without waiting twenty five minutes for it.
+    public init(
         store: any FocusStore,
         now: @escaping @Sendable () -> Date = { Date() },
         monotonic: @escaping @Sendable () -> TimeInterval = ContinuousTime.seconds
@@ -246,10 +248,10 @@ public final class FocusPane: NotchPane {
 /// Seconds on a clock that only moves forward and, unlike system uptime, does not stop
 /// while the machine is asleep. Sleeping for two hours has to look like two hours passing,
 /// otherwise it would be indistinguishable from somebody setting the date forward.
-enum ContinuousTime {
+public enum ContinuousTime {
     private static let origin = ContinuousClock.now
 
-    static let seconds: @Sendable () -> TimeInterval = {
+    public static let seconds: @Sendable () -> TimeInterval = {
         let elapsed = ContinuousClock.now - origin
         return TimeInterval(elapsed.components.seconds)
             + TimeInterval(elapsed.components.attoseconds) * 1e-18

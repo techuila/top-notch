@@ -12,8 +12,10 @@ import SwiftUI
 public final class DropPane: NotchPane {
     public let id: PaneID = .drop
 
+    /// Grows by one chip row when the third file lands and shrinks back when it leaves.
+    /// Two values only, so the panel morphs once rather than breathing on every drop.
     public var contentHeight: CGFloat {
-        DropLayout.headerHeight + DropLayout.headerGap + DropLayout.shelfHeight
+        DropLayout.contentHeight(for: shelf.items.count)
     }
 
     /// Live whenever something is parked, so the notch can say so while closed. The count

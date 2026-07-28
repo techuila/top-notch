@@ -6,6 +6,11 @@ import AppKit
 final class NotchHitBox {
     var size: CGSize = .zero
 
+    /// The catch band for incoming file drags, in window coordinates. Only live while
+    /// `dragArmed`, so it never costs the user a menu bar click.
+    var dragBand: CGRect = .zero
+    var dragArmed = false
+
     /// The surface in window coordinates: centred horizontally, flush with the top edge.
     func rect(in bounds: CGRect) -> CGRect {
         CGRect(
@@ -14,6 +19,11 @@ final class NotchHitBox {
             width: size.width,
             height: size.height
         )
+    }
+
+    func accepts(_ point: CGPoint, in bounds: CGRect) -> Bool {
+        if rect(in: bounds).contains(point) { return true }
+        return dragArmed && dragBand.contains(point)
     }
 }
 
@@ -33,7 +43,7 @@ final class NotchHitTestView: NSView {
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
-        guard hitBox.rect(in: bounds).contains(point) else { return nil }
+        guard hitBox.accepts(point, in: bounds) else { return nil }
         return super.hitTest(point)
     }
 }

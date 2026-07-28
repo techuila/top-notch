@@ -35,4 +35,11 @@ enum ShellMetrics {
 
     /// Minimum gap between two pane steps driven by a classic mouse wheel.
     static let wheelDebounce: CFTimeInterval = 0.22
+
+    /// How far past the collapsed notch the invisible drag catcher reaches, so a drag
+    /// aimed at the top of the screen is caught before the cursor is on the housing.
+    static let dragCatchMargin: CGFloat = 90
+
+    /// Extra reach for arming the catcher, so it is live before the drag arrives.
+    static let dragApproach: CGFloat = 70
 }

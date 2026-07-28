@@ -115,20 +115,33 @@ struct PaneHost: View {
     @Bindable var model: NotchShellModel
 
     var body: some View {
-        ScrollView(.horizontal) {
-            // Identity must be `PaneID` itself, not `PaneID.id`, or the scroll position
-            // binding has nothing to match against and programmatic jumps do nothing.
-            LazyHStack(spacing: 0) {
-                ForEach(model.order, id: \.self) { id in
-                    PaneSlot(model: model, id: id)
-                        .frame(width: Metrics.expandedWidth)
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal) {
+                // Identity must be `PaneID` itself, not `PaneID.id`, or the scroll position
+                // binding has nothing to match against and programmatic jumps do nothing.
+                LazyHStack(spacing: 0) {
+                    ForEach(model.order, id: \.self) { id in
+                        PaneSlot(model: model, id: id)
+                            .frame(width: Metrics.expandedWidth)
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .scrollIndicators(.hidden, axes: [.horizontal, .vertical])
+            .scrollTargetBehavior(.viewAligned)
+            .scrollPosition(id: $model.scrollTarget)
+            .task {
+                // A scroll view acts on a change of position, not on the value it is born
+                // holding, so opening on anything but the first pane has to be asserted
+                // once the content exists. Unanimated: this is the opening frame.
+                await Task.yield()
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
+                    proxy.scrollTo(model.landed, anchor: .center)
                 }
             }
-            .scrollTargetLayout()
         }
-        .scrollIndicators(.hidden, axes: [.horizontal, .vertical])
-        .scrollTargetBehavior(.viewAligned)
-        .scrollPosition(id: $model.scrollTarget)
         .frame(height: model.landedContentHeight)
         .notchAnimation(Motion.morph, value: model.landedContentHeight)
     }

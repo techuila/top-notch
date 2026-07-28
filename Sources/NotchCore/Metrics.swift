@@ -24,8 +24,17 @@ public enum Metrics {
     public static let artworkIdleSize: CGFloat = 24
     public static let ringIdleSize: CGFloat = 15
 
-    /// Thickness of the progress line that runs the full width of the notch bottom edge.
+    /// Height of a waveform bar at rest. A paused track should read as a flat, quiet row
+    /// of dashes, so this is a thickness rather than anything derived from the bar width.
+    public static let waveformRestHeight: CGFloat = 2
+
+    /// Thickness of the progress line that runs along the notch bottom edge.
     public static let idleProgressHeight: CGFloat = 2.5
+
+    /// Horizontal inset for that line, so it stops where the bottom corners start to
+    /// curve. Without it the line runs into the corner, gets cut by the clip, and reads
+    /// as a bar hanging off the notch rather than an edge following its shape.
+    public static let idleProgressInset: CGFloat = idleCornerRadius * 0.75
 
     // MARK: Proximity
 

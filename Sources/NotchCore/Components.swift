@@ -80,18 +80,31 @@ public struct NotchProgress: View {
     private let value: Double
     private let height: CGFloat
     private let tint: Color
+    private let prominence: Double
 
-    public init(value: Double, height: CGFloat = 3, tint: Color = Style.ink) {
+    /// - Parameter prominence: 1 for the scrubber inside an open panel, lower for the
+    ///   hairline on the closed notch. On a pure black notch a full-strength white fill
+    ///   reads as a glowing bar rather than a progress line, so the idle line is dimmed
+    ///   and its unfilled track is lifted enough to be visible at all.
+    public init(
+        value: Double,
+        height: CGFloat = 3,
+        tint: Color = Style.ink,
+        prominence: Double = 1
+    ) {
         self.value = min(max(value, 0), 1)
         self.height = height
         self.tint = tint
+        self.prominence = min(max(prominence, 0), 1)
     }
 
     public var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
-                Capsule().fill(Style.ink.opacity(0.2))
-                Capsule().fill(tint).frame(width: geo.size.width * value)
+                Capsule().fill(Style.ink.opacity(0.10 + 0.10 * prominence))
+                Capsule()
+                    .fill(tint.opacity(0.55 + 0.45 * prominence))
+                    .frame(width: geo.size.width * value)
             }
         }
         .frame(height: height)

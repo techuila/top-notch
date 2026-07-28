@@ -15,9 +15,26 @@ swift build -c "$CONFIG"
 BIN="$(swift build -c "$CONFIG" --show-bin-path)/TopNotch"
 
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
 cp "$BIN" "$APP/Contents/MacOS/TopNotch"
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
+
+# System-wide Now Playing. Without these three the app still runs; `probe()` returns
+# false and it falls back to per-app AppleScript for Spotify and Apple Music.
+ADAPTER="$ROOT/Vendor/mediaremote-adapter"
+if [ ! -d "$ADAPTER/build/MediaRemoteAdapter.framework" ]; then
+  "$ROOT/Scripts/fetch-adapter.sh"
+fi
+if [ -d "$ADAPTER/build/MediaRemoteAdapter.framework" ]; then
+  cp "$ADAPTER/bin/mediaremote-adapter.pl" "$APP/Contents/Resources/"
+  cp -R "$ADAPTER/build/MediaRemoteAdapter.framework" "$APP/Contents/Frameworks/"
+  cp "$ADAPTER/build/MediaRemoteAdapterTestClient" "$APP/Contents/MacOS/"
+  # Nested code is signed before the app, so the outer seal covers it.
+  codesign --force --sign - "$APP/Contents/Frameworks/MediaRemoteAdapter.framework"
+  codesign --force --sign - "$APP/Contents/MacOS/MediaRemoteAdapterTestClient"
+else
+  echo "warning: adapter unavailable, app will fall back to AppleScript" >&2
+fi
 
 # Ad-hoc signature is enough to run locally. Distribution signing lives elsewhere.
 #

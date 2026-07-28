@@ -62,6 +62,10 @@ struct IdleBarView: View {
         if composition.progress != nil {
             Color.clear
                 .frame(height: Metrics.idleProgressHeight)
+                // Stops short of where the bottom corners curve away, so the line reads as
+                // part of the notch edge instead of a bar running off the end of it.
+                .padding(.horizontal, Metrics.idleProgressInset)
+                .padding(.bottom, 1)
                 .matchedGeometryEffect(
                     id: NotchTravelID.progress.rawValue, in: namespace, isSource: isSource
                 )
@@ -128,7 +132,10 @@ struct TravelLayer: View {
                 NotchProgress(
                     value: progress,
                     height: Metrics.idleProgressHeight,
-                    tint: Style.accent(for: model.focusedID)
+                    tint: Style.accent(for: model.focusedID),
+                    // Music's accent is plain white. At full strength on a black notch
+                    // that is a glowing stub, not a progress line.
+                    prominence: model.phase == .expanded ? 1 : 0.25
                 )
                 .matchedGeometryEffect(
                     id: NotchTravelID.progress.rawValue, in: namespace, isSource: false

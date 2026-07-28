@@ -98,6 +98,9 @@ struct ArtworkView: View {
 struct WaveformView: View {
     let levels: [Float]
 
+    /// True when every bar is at rest, which is what paused and stopped both look like.
+    private var isFlat: Bool { levels.allSatisfy { $0 <= 0.001 } }
+
     var body: some View {
         GeometryReader { geo in
             let count = max(levels.count, 1)
@@ -106,10 +109,17 @@ struct WaveformView: View {
                 ForEach(0..<count, id: \.self) { index in
                     let level = index < levels.count ? CGFloat(levels[index]) : 0
                     Capsule()
-                        .fill(Style.ink)
+                        .fill(Style.ink.opacity(isFlat ? 0.4 : 1))
                         .frame(
                             width: unit,
-                            height: max(geo.size.height * min(max(level, 0), 1), unit)
+                            // The floor is the bar's thickness, not its width. Clamping to
+                            // the width made a resting bar exactly as tall as it is wide,
+                            // and a capsule at those proportions is a circle, so a paused
+                            // track rendered as a row of dots.
+                            height: max(
+                                geo.size.height * min(max(level, 0), 1),
+                                Metrics.waveformRestHeight
+                            )
                         )
                 }
             }

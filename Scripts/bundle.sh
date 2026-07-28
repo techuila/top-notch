@@ -20,8 +20,18 @@ cp "$BIN" "$APP/Contents/MacOS/TopNotch"
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
 
 # Ad-hoc signature is enough to run locally. Distribution signing lives elsewhere.
+#
+# This must NOT fall back to signing without entitlements. A malformed entitlements
+# file makes AMFI reject the plist, and a silent fallback produces an app that looks
+# signed, then gets refused by launchd with no useful error. Fail loudly instead.
 codesign --force --deep --sign - \
   --entitlements "$ROOT/Resources/TopNotch.entitlements" \
-  "$APP" 2>/dev/null || codesign --force --deep --sign - "$APP"
+  "$APP"
+
+# Prove the entitlements actually landed rather than trusting the exit code.
+if ! codesign -d --entitlements - --xml "$APP" 2>/dev/null | grep -q "apple-events"; then
+  echo "error: entitlements did not apply to $APP" >&2
+  exit 1
+fi
 
 echo "built $APP"

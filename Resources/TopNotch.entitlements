@@ -9,11 +9,5 @@
 	<false/>
 	<key>com.apple.security.automation.apple-events</key>
 	<true/>
-	<!-- Notes are encrypted with a key held in the Keychain, gated by Touch ID
-	     for any note the user marks private. -->
-	<key>keychain-access-groups</key>
-	<array>
-		<string>$(AppIdentifierPrefix)com.aliteo.topnotch</string>
-	</array>
 </dict>
 </plist>

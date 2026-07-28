@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Not sandboxed. The drop shelf needs arbitrary file access and playback
+	     control needs Apple Events, neither of which survives the sandbox for a
+	     Developer ID app distributed outside the App Store. -->
+	<key>com.apple.security.app-sandbox</key>
+	<false/>
+	<key>com.apple.security.automation.apple-events</key>
+	<true/>
+	<!-- Notes are encrypted with a key held in the Keychain, gated by Touch ID
+	     for any note the user marks private. -->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)com.aliteo.topnotch</string>
+	</array>
+</dict>
+</plist>

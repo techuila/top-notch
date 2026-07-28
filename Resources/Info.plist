@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleName</key>
+	<string>TopNotch</string>
+	<key>CFBundleDisplayName</key>
+	<string>TopNotch</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.aliteo.topnotch</string>
+	<key>CFBundleExecutable</key>
+	<string>TopNotch</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>26.0</string>
+	<!-- No dock icon, no app switcher entry. TopNotch is only the notch. -->
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSSupportsAutomaticTermination</key>
+	<false/>
+	<key>NSSupportsSuddenTermination</key>
+	<false/>
+	<!-- Controlling Spotify and Apple Music when the system route is unavailable. -->
+	<key>NSAppleEventsUsageDescription</key>
+	<string>TopNotch controls playback in Spotify and Apple Music from the notch.</string>
+</dict>
+</plist>

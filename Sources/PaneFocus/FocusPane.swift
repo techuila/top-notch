@@ -76,6 +76,14 @@ public final class FocusPane: NotchPane {
 
     // MARK: Idle notch
 
+    /// Recomputed from the clock every time it is read, so it is never stale when asked.
+    ///
+    /// Note for the shell: this pane runs no timer while the notch is closed, per the rule
+    /// that nothing ticks when nothing is on screen. It republishes on every state change
+    /// and at every phase boundary, but the countdown text in `pinnedLeading` only advances
+    /// when the shell reads it again. A live second-by-second idle countdown needs the
+    /// shell to drive its own redraw, or `IdleItem.ring` to carry the deadline `Date`
+    /// instead of a formatted string.
     public var idle: IdleSignal {
         let instant = now()
 

@@ -73,17 +73,29 @@ enum ThumbnailRenderer {
 /// A bounded main-actor cache of decoded chip thumbnails.
 ///
 /// Requests for the same item coalesce onto one task, so a chip redrawing during a hover
-/// never starts a second render, and the cache is capped so a long session cannot grow it.
+/// never starts a second render. Eviction is least recently used against two ceilings:
+/// an entry count, and the decoded bytes those entries hold. The byte ceiling is the one
+/// that matters, because a shelf full of large images is exactly the case where a count
+/// alone would let the cache grow without bound.
 @MainActor
 final class ThumbnailCache {
     static let shared = ThumbnailCache()
 
+    /// Most thumbnails are 68x68 or smaller, so this is roughly 100 of them.
+    static let byteLimit = 2 * 1024 * 1024
+    static let entryLimit = 48
+
     private var images: [UUID: NSImage] = [:]
+    private var costs: [UUID: Int] = [:]
     private var order: [UUID] = []
     private var inFlight: [UUID: Task<NSImage?, Never>] = [:]
-    private let limit = 48
+    private var bytes = 0
 
     private init() {}
+
+    /// Decoded bytes currently held.
+    var byteCount: Int { bytes }
+    var count: Int { images.count }
 
     func image(for item: ShelfItem) async -> NSImage? {
         if let hit = images[item.id] {
@@ -108,23 +120,43 @@ final class ThumbnailCache {
     func cached(_ id: UUID) -> NSImage? { images[id] }
 
     func forget(_ id: UUID) {
-        images[id] = nil
-        order.removeAll { $0 == id }
+        drop(id)
         inFlight[id]?.cancel()
         inFlight[id] = nil
     }
 
     private func store(_ image: NSImage, for id: UUID) {
+        drop(id)
         images[id] = image
-        touch(id)
-        while order.count > limit, let evicted = order.first {
-            order.removeFirst()
-            images[evicted] = nil
+        costs[id] = Self.cost(of: image)
+        bytes += costs[id] ?? 0
+        order.append(id)
+
+        while order.count > Self.entryLimit || bytes > Self.byteLimit {
+            guard let evicted = order.first, order.count > 1 else { break }
+            drop(evicted)
         }
     }
 
+    private func drop(_ id: UUID) {
+        if let cost = costs[id] { bytes -= cost }
+        costs[id] = nil
+        images[id] = nil
+        order.removeAll { $0 == id }
+    }
+
     private func touch(_ id: UUID) {
+        guard images[id] != nil else { return }
         order.removeAll { $0 == id }
         order.append(id)
+    }
+
+    /// What the decoded bitmap actually occupies, not the size of the file it came from.
+    private static func cost(of image: NSImage) -> Int {
+        let pixels = image.representations.reduce(0) { $0 + $1.pixelsWide * $1.pixelsHigh }
+        guard pixels > 0 else {
+            return Int(image.size.width * image.size.height * 4)
+        }
+        return pixels * 4
     }
 }

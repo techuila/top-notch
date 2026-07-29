@@ -8,7 +8,7 @@ struct IdleEntry: Equatable {
     var item: IdleItem
 }
 
-/// The idle bar, resolved from every pane's `IdleSignal` by the locked rules in OPINIONS.
+/// The idle bar, resolved from every pane's `IdleSignal` by the locked rules in DECISIONS.
 struct IdleComposition: Equatable {
     var pinned: IdleEntry?
     var identity: IdleEntry?
@@ -125,6 +125,16 @@ final class NotchShellModel {
             rotor: rotor,
             progress: focusedSignal?.progress
         )
+    }
+
+    /// Every pane's pulse token, summed.
+    ///
+    /// The shell animates on this changing, never on what it equals, so the sum does not
+    /// have to mean anything: any pane bumping its own token moves it, which is exactly
+    /// the signal the notch needs. Panes only ever increase their token, so this only
+    /// ever increases too.
+    var pulse: Int {
+        panes.reduce(0) { $0 + $1.idle.pulse }
     }
 
     /// The rotor entry currently parked in the slot, clamped so a shrinking rotor is safe.

@@ -48,6 +48,14 @@ struct NotchRootView: View {
         .frame(width: surfaceWidth, height: surfaceHeight, alignment: .top)
         .overlay(alignment: .topLeading) { TravelLayer(model: model, namespace: travel) }
         .notchMaterial(isExpanded: isExpanded, cornerRadius: cornerRadius)
+        // A pane asking the notch to acknowledge a moment. Anchored to the top because the
+        // notch hangs off the top edge of the screen, so scaling from the centre would lift
+        // it away from the bezel it is supposed to be part of.
+        .phaseAnimator([1, ShellMetrics.pulseScale, 1], trigger: model.pulse) { view, scale in
+            view.scaleEffect(scale, anchor: .top)
+        } animation: { _ in
+            Motion.reduced(Motion.tap)
+        }
         .contentShape(Rectangle())
         .onContinuousHover { phase in
             switch phase {

@@ -78,12 +78,10 @@ public final class FocusPane: NotchPane {
 
     /// Recomputed from the clock every time it is read, so it is never stale when asked.
     ///
-    /// Note for the shell: this pane runs no timer while the notch is closed, per the rule
-    /// that nothing ticks when nothing is on screen. It republishes on every state change
-    /// and at every phase boundary, but the countdown text in `pinnedLeading` only advances
-    /// when the shell reads it again. A live second-by-second idle countdown needs the
-    /// shell to drive its own redraw, or `IdleItem.ring` to carry the deadline `Date`
-    /// instead of a formatted string.
+    /// This pane still runs no timer while the notch is closed. A running session hands the
+    /// shell its `span` instead, and the shell advances the arc and the digits from the
+    /// clock on its own; a paused one carries no span and the published label stands, which
+    /// is correct because a held countdown has nothing to advance.
     public var idle: IdleSignal {
         let instant = now()
 
@@ -95,7 +93,8 @@ public final class FocusPane: NotchPane {
                 // No session, so the ring is not the identity and the glyph has to be.
                 identity: .glyph(id.glyph),
                 rotating: flourish == nil ? nil : .badge(symbol: "checkmark", text: "Done"),
-                progress: nil
+                progress: nil,
+                pulse: flourishToken
             )
         }
 
@@ -104,13 +103,20 @@ public final class FocusPane: NotchPane {
             isLive: true,
             priority: Self.priority,
             // The permanent outer-left slot. Only a live pomodoro may claim it.
-            pinnedLeading: .ring(progress: state.progress(at: instant), label: label),
+            pinnedLeading: .ring(
+                progress: state.progress(at: instant),
+                label: label,
+                span: state.span
+            ),
             // The ring above is already this pane's identity. A second marker would say
             // the same thing twice.
             identity: nil,
             rotating: state.isRunning ? .badge(symbol: id.glyph, text: label) : nil,
             // The bottom edge line belongs to music. The ring carries our progress.
-            progress: nil
+            progress: nil,
+            // The boundary is worth acknowledging even with the notch closed, which is
+            // most of the time a pomodoro actually ends.
+            pulse: flourishToken
         )
     }
 

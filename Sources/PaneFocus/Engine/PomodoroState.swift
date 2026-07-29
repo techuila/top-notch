@@ -89,6 +89,17 @@ public struct PomodoroState: Equatable, Sendable, Codable {
         return min(max(elapsed(at: now) / phaseDuration, 0), 1)
     }
 
+    /// The window the current phase occupies, start to deadline, or `nil` when nothing is
+    /// counting down.
+    ///
+    /// Only a running phase has one, which is exactly when the countdown can be derived
+    /// from the clock alone. The start is recovered from the deadline rather than stored,
+    /// so resuming from a pause reports the window the remaining time actually implies.
+    public var span: ClosedRange<Date>? {
+        guard case .running(let deadline) = run, phaseDuration > 0 else { return nil }
+        return deadline.addingTimeInterval(-phaseDuration)...deadline
+    }
+
     /// True once the deadline has passed but the boundary has not been applied yet.
     public func hasElapsed(at now: Date) -> Bool {
         if case .running(let deadline) = run { return deadline <= now }

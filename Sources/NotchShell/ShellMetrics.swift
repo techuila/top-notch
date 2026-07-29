@@ -42,4 +42,8 @@ enum ShellMetrics {
 
     /// Extra reach for arming the catcher, so it is live before the drag arrives.
     static let dragApproach: CGFloat = 70
+
+    /// How far the whole surface swells when a pane asks for a pulse. Small on purpose:
+    /// the notch is acknowledging something, not announcing itself.
+    static let pulseScale: CGFloat = 1.045
 }

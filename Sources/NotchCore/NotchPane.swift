@@ -36,7 +36,12 @@ public enum IdleItem: Equatable, Sendable {
     /// Live audio levels, 0...1, drawn as the waveform. Five values is the house standard.
     case waveform([Float])
     /// A progress ring with a short label beside it, used by a running pomodoro.
-    case ring(progress: Double, label: String)
+    ///
+    /// `span` is the phase's start and end. When it is present the shell derives both the
+    /// arc and the digits from the clock and redraws them itself, so a countdown advances
+    /// second by second without the pane waking up to republish. Pass `nil` when the value
+    /// is held rather than running, and `label` stands as published.
+    case ring(progress: Double, label: String, span: ClosedRange<Date>?)
     /// An SF Symbol plus a short value, e.g. a file count.
     case badge(symbol: String, text: String)
     /// A bare SF Symbol, used as the focused identity when there is nothing richer.
@@ -45,7 +50,7 @@ public enum IdleItem: Equatable, Sendable {
 
 /// What a pane publishes to the idle notch.
 ///
-/// See OPINIONS.md for the locked rules the shell applies to these. In short: a running
+/// See DECISIONS.md for the locked rules the shell applies to these. In short: a running
 /// pomodoro owns the outer-left slot permanently, the focused pane supplies the inner-left
 /// identity, and everything else queues into the rotating right slot.
 public struct IdleSignal: Equatable, Sendable {
@@ -68,6 +73,15 @@ public struct IdleSignal: Equatable, Sendable {
     /// pane's value is used. `nil` hides the line.
     public var progress: Double?
 
+    /// Asks the notch itself for a brief acknowledgement, for a moment the pane cannot
+    /// express on its own: a pomodoro reaching its boundary, a drop landing.
+    ///
+    /// Only ever increase it. The shell animates on the change, never on the value, so a
+    /// pane that resets its counter would fire the flourish a second time. It is read even
+    /// while the notch is closed, which is the point: the acknowledgement is the notch's,
+    /// not the pane's, and the pane may not be on screen at all when the moment arrives.
+    public var pulse: Int
+
     public static let inactive = IdleSignal(isLive: false, priority: 0)
 
     public init(
@@ -76,7 +90,8 @@ public struct IdleSignal: Equatable, Sendable {
         pinnedLeading: IdleItem? = nil,
         identity: IdleItem? = nil,
         rotating: IdleItem? = nil,
-        progress: Double? = nil
+        progress: Double? = nil,
+        pulse: Int = 0
     ) {
         self.isLive = isLive
         self.priority = priority
@@ -84,6 +99,7 @@ public struct IdleSignal: Equatable, Sendable {
         self.identity = identity
         self.rotating = rotating
         self.progress = progress
+        self.pulse = pulse
     }
 }
 

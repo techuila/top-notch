@@ -27,21 +27,13 @@ struct IdleItemView: View {
                     id: NotchTravelID.waveform.rawValue, in: namespace, isSource: isSource
                 )
 
-        case .ring(let progress, let label):
-            HStack(spacing: ShellMetrics.itemSpacing) {
-                NotchRing(
-                    value: progress,
-                    size: Metrics.ringIdleSize,
-                    lineWidth: Metrics.idleProgressHeight,
-                    tint: Style.accent(for: entry.pane)
-                )
-                if !label.isEmpty {
-                    Text(label)
-                        .font(Style.numeric)
-                        .foregroundStyle(Style.ink)
-                        .lineLimit(1)
-                }
-            }
+        case .ring(let progress, let label, let span):
+            RingSlot(
+                progress: progress,
+                label: label,
+                span: span,
+                tint: Style.accent(for: entry.pane)
+            )
 
         case .badge(let symbol, let text):
             HStack(spacing: ShellMetrics.itemSpacing) {
@@ -61,6 +53,54 @@ struct IdleItemView: View {
                 .font(Style.numeric)
                 .foregroundStyle(Style.accent(for: entry.pane))
                 .frame(width: Metrics.ringIdleSize, height: Metrics.ringIdleSize)
+        }
+    }
+}
+
+/// A progress ring and its label, the pomodoro's permanent slot.
+///
+/// Given a `span` the arc and the digits are both derived from the clock here, so a running
+/// countdown advances without the pane republishing every second. The redraw is the shell's
+/// and it exists only while a session is genuinely running: a paused or stopped one carries
+/// no span, falls back to the published values, and nothing ticks. That is the whole reason
+/// the item carries a date range rather than a formatted string.
+private struct RingSlot: View {
+    let progress: Double
+    let label: String
+    let span: ClosedRange<Date>?
+    let tint: Color
+
+    var body: some View {
+        if let span, span.upperBound > span.lowerBound {
+            // Phased from the span's start so the tick lands on the second boundary the
+            // user is actually counting, not on whenever this view happened to appear.
+            TimelineView(.periodic(from: span.lowerBound, by: 1)) { context in
+                let now = min(max(context.date, span.lowerBound), span.upperBound)
+                let total = span.upperBound.timeIntervalSince(span.lowerBound)
+                row(
+                    progress: now.timeIntervalSince(span.lowerBound) / total,
+                    label: notchTime(span.upperBound.timeIntervalSince(now))
+                )
+            }
+        } else {
+            row(progress: progress, label: label)
+        }
+    }
+
+    private func row(progress: Double, label: String) -> some View {
+        HStack(spacing: ShellMetrics.itemSpacing) {
+            NotchRing(
+                value: progress,
+                size: Metrics.ringIdleSize,
+                lineWidth: Metrics.idleProgressHeight,
+                tint: tint
+            )
+            if !label.isEmpty {
+                Text(label)
+                    .font(Style.numeric)
+                    .foregroundStyle(Style.ink)
+                    .lineLimit(1)
+            }
         }
     }
 }

@@ -3,13 +3,14 @@
 A macOS 26 notch app. Music, a file drop shelf, encrypted quick notes and a pomodoro,
 all living in the MacBook notch.
 
-**Read `OPINIONS.md` first.** It holds every locked design decision. Anything marked
+**Read `DECISIONS.md` first.** It holds every locked design decision. Anything marked
 LOCKED is settled - build it exactly as written, do not redesign it, do not "improve" it.
 
 ## Build
 
 ```
 swift build            # compile
+swift test             # PaneNotesTests and PaneFocusTests
 ./Scripts/bundle.sh    # produce build/TopNotch.app
 ```
 

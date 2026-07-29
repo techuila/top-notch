@@ -1,6 +1,6 @@
-# OPINIONS
+# DECISIONS
 
-Locked decisions for TopNotch. Read this before proposing or building anything.
+Locked design and product decisions for TopNotch. Read this before proposing or building anything.
 Do not re-litigate what is here. Append new entries as decisions get made.
 
 Status key: **LOCKED** = decided, build it exactly this way. **OPEN** = still being decided.
@@ -101,14 +101,3 @@ Notes are **public by default** and open with no prompt at all. Any individual n
 marked private, and a private note requires Touch ID to open. This mirrors Apple Notes.
 
 Rejected: locking the entire notes feature behind Touch ID (too much friction for a scratchpad).
-
----
-
-## Process
-
-### Presenting UI options - **LOCKED**
-Never use ASCII art or text mockups. Build a real interactive HTML page with live hover
-states and animations, publish it, and send the link.
-
-### Reports - **LOCKED**
-Lead with visuals and tables. Bullet points over paragraphs. No walls of text.

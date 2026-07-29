@@ -4,7 +4,7 @@ import NotchCore
 
 /// System-wide Now Playing, via the vendored `mediaremote-adapter` perl shim.
 ///
-/// This satisfies the LOCKED decision in OPINIONS.md: Apple Music, a browser tab, a
+/// This satisfies the LOCKED decision in DECISIONS.md: Apple Music, a browser tab, a
 /// podcast app and VLC all report through the same path and get identical controls.
 ///
 /// Why a perl shim rather than MediaRemote directly: on macOS 26.5 an unentitled process

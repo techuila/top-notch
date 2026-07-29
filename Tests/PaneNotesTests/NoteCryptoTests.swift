@@ -1,17 +1,16 @@
 // Unit tests for the notes crypto.
 //
-// They live here, next to what they test, because the package has no test target and
-// Package.swift belongs to the orchestrator. `TOPNOTCH_TESTS` is defined only by the test
-// harness, so the whole file compiles to nothing in the app and XCTest is never linked
-// into TopNotch. When a real `.testTarget` exists, delete these two lines and move the
-// file into it unchanged.
-#if TOPNOTCH_TESTS
+// `@testable` rather than a public surface: sealing, the key policies and the on-disk
+// layout are all internal on purpose, and widening them just to be tested would put the
+// crypto in the app's public API for no benefit.
 
 import CryptoKit
 import Foundation
 import LocalAuthentication
 import Security
 import XCTest
+
+@testable import PaneNotes
 
 // MARK: - Sealing and opening
 
@@ -395,5 +394,3 @@ final class FakeKeychain: KeychainBackend {
         return errSecSuccess
     }
 }
-
-#endif

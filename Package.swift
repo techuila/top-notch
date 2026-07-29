@@ -31,5 +31,18 @@ let package = Package(
             dependencies: ["NotchCore", "NotchShell", "PaneMusic", "PaneDrop", "PaneNotes", "PaneFocus"],
             swiftSettings: swiftSettings
         ),
+
+        // One test target per module that has anything worth testing. Both use `@testable`
+        // rather than widening a module's public surface to suit its tests.
+        .testTarget(
+            name: "PaneNotesTests",
+            dependencies: ["PaneNotes"],
+            swiftSettings: swiftSettings
+        ),
+        .testTarget(
+            name: "PaneFocusTests",
+            dependencies: ["PaneFocus"],
+            swiftSettings: swiftSettings
+        ),
     ]
 )

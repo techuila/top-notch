@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// The visual language. Panes style themselves through these, never with raw values.
@@ -67,6 +68,25 @@ public enum Style {
     public static let tileRadius: CGFloat = 10
     public static let cardRadius: CGFloat = 14
     public static let artworkRadius: CGFloat = 13
+
+    // MARK: AppKit spellings
+
+    /// The same tokens resolved for AppKit, for a pane hosting an `NSTextView` or any
+    /// other view that cannot take a SwiftUI `Font` or `Color`.
+    ///
+    /// These are paired with the values above by hand. Changing one means changing the
+    /// other, which is the price of AppKit not speaking SwiftUI.
+    @MainActor
+    public enum Hosted {
+        /// Pairs with `Style.body`.
+        public static let body = NSFont.systemFont(ofSize: 12.5, weight: .regular)
+        /// Pairs with `Style.ink`.
+        public static let ink = NSColor.white
+        /// Pairs with `Style.inkMuted`.
+        public static let inkMuted = NSColor.white.withAlphaComponent(0.56)
+        /// Pairs with `Style.inkFaint`.
+        public static let inkFaint = NSColor.white.withAlphaComponent(0.45)
+    }
 }
 
 /// The Liquid Glass material used by the expanded panel.

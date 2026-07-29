@@ -60,6 +60,31 @@ public enum Metrics {
     /// Fallback panel height if a pane does not state a preference.
     public static let defaultPaneHeight: CGFloat = 208
 
+    // MARK: Inside a pane
+    //
+    // The scale panes lay themselves out on. Before these existed every pane defined a
+    // private layout enum and the four drifted apart, which is exactly what a design
+    // system is for. Anything that does not fit one of these is a gap worth reporting
+    // rather than a local constant.
+
+    /// Between a label and the value it describes.
+    public static let spacingTight: CGFloat = 4
+    /// Between controls in a row, and between a glyph and its text.
+    public static let spacingSnug: CGFloat = 8
+    /// Between stacked blocks inside a pane. The default when unsure.
+    public static let spacing: CGFloat = 12
+    /// Between a pane's major sections, e.g. a header and the list under it.
+    public static let spacingLoose: CGFloat = 18
+
+    /// Vertical gap between rows in a list. Smaller than `spacing` because a row already
+    /// carries its own internal padding from `NotchTile`.
+    public static let listRowSpacing: CGFloat = 6
+
+    /// Blur radius that hides text while leaving its shape and width readable. Used for a
+    /// private note's redacted title, where the width bucket is the only thing the file
+    /// discloses. One value so nothing is redacted more weakly somewhere else.
+    public static let redactionBlur: CGFloat = 3.4
+
     /// Panel height for a given pane content height.
     public static func panelHeight(forContent height: CGFloat) -> CGFloat {
         paneTop + height + paneBottom

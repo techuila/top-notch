@@ -4,26 +4,47 @@ import SwiftUI
 
 /// An icon button with the house hover and press behaviour: it scales down on press,
 /// lifts a fill on hover, and never changes size in layout.
+///
+/// A toggle is the same button with `isSelected`, which borrows the selected pill's
+/// near-opaque fill. Panes must not fake a selected state with a tile behind a plain
+/// button; the two drift apart the moment either one is touched.
 public struct NotchButton: View {
     private let symbol: String
     private let size: CGFloat
+    private let isSelected: Bool
     private let action: () -> Void
 
     @State private var hovering = false
     @State private var pressed = false
 
-    public init(_ symbol: String, size: CGFloat = 15, action: @escaping () -> Void) {
+    public init(
+        _ symbol: String,
+        size: CGFloat = 15,
+        isSelected: Bool = false,
+        action: @escaping () -> Void
+    ) {
         self.symbol = symbol
         self.size = size
+        self.isSelected = isSelected
         self.action = action
+    }
+
+    /// Selected wins over hover: a hover tint on top of the active fill reads as a
+    /// half-pressed state that does not exist.
+    private var foreground: Color {
+        isSelected ? Style.onActive : Style.ink.opacity(hovering ? 1 : 0.86)
+    }
+
+    private var fill: Color {
+        isSelected ? Style.fillActive : Style.fill.opacity(hovering ? 1 : 0)
     }
 
     public var body: some View {
         Image(systemName: symbol)
             .font(.system(size: size, weight: .medium))
-            .foregroundStyle(Style.ink.opacity(hovering ? 1 : 0.86))
+            .foregroundStyle(foreground)
             .frame(width: size + 14, height: size + 14)
-            .background(Circle().fill(Style.fill.opacity(hovering ? 1 : 0)))
+            .background(Circle().fill(fill))
             .scaleEffect(pressed ? 0.86 : 1)
             .contentShape(Circle())
             .onTapGesture(perform: action)
@@ -31,7 +52,9 @@ public struct NotchButton: View {
             .onHover { hovering = $0 }
             .notchAnimation(Motion.tap, value: pressed)
             .notchAnimation(Motion.tap, value: hovering)
+            .notchAnimation(Motion.tap, value: isSelected)
             .accessibilityAddTraits(.isButton)
+            .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 

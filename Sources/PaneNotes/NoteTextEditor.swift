@@ -1,4 +1,5 @@
 import AppKit
+import NotchCore
 import SwiftUI
 
 /// The editor, and the reason it can be typed into at all.
@@ -136,11 +137,9 @@ final class NoteEditorHost: NSView {
         textView.allowsUndo = true
         textView.drawsBackground = false
         textView.backgroundColor = .clear
-        // Style.ink and Style.body, in their AppKit spellings. NotchCore has no AppKit
-        // font or colour tokens; see the report.
-        textView.font = NSFont.systemFont(ofSize: 12.5)
-        textView.textColor = .white
-        textView.insertionPointColor = .white
+        textView.font = Style.Hosted.body
+        textView.textColor = Style.Hosted.ink
+        textView.insertionPointColor = Style.Hosted.ink
         textView.textContainerInset = NSSize(width: 2, height: 4)
         // A scratchpad, and a private one. Nothing here should be sent to the spelling
         // or completion machinery, and nothing should rewrite what was typed.

@@ -194,7 +194,7 @@ private struct NoteRow: View {
                 .font(Style.subtitle)
                 .foregroundStyle(Style.ink.opacity(0.8))
                 .lineLimit(1)
-                .blur(radius: 3.4)
+                .blur(radius: Metrics.redactionBlur)
                 .accessibilityHidden(true)
                 .matchedGeometryEffect(id: item.id, in: geometry, isSource: true)
         }

@@ -101,7 +101,8 @@ Runtime dlopen dodges the linker, not App Review's static scanner.
 
 ### Live proof on 26.5
 
-Built the framework with CMake (clean build, ad-hoc signed). **VERIFIED** output:
+Built the framework with CMake (clean build, ad-hoc signed). **VERIFIED** output, with the
+track and title strings redacted and everything structural left exactly as captured:
 
 ```
 $ perl mediaremote-adapter.pl <fw> <testclient> test
@@ -116,7 +117,7 @@ $ perl mediaremote-adapter.pl <fw> get --now -h
   "timestamp" : "2026-07-28T16:34:07Z",
   "bundleIdentifier" : "company.thebrowser.Browser",
   "processIdentifier" : 47408,
-  "title" : "Facebook",
+  "title" : "<page title>",
   "duration" : 335.62729300000001,
   "artist" : "",
   "contentItemIdentifier" : "654C7982-...",
@@ -124,12 +125,12 @@ $ perl mediaremote-adapter.pl <fw> get --now -h
 }
 ```
 
-Note it picked up a **browser video**, not Spotify. This is genuinely system-wide, which is what `OPINIONS.md` locked in.
+Note it picked up a **browser video**, not Spotify. This is genuinely system-wide, which is what `DECISIONS.md` locked in.
 
 With Spotify playing, **VERIFIED** full payload including artwork:
 
 ```
-album              str    'Not Like Us'
+album              str    '<album>'
 mediaType          str    'kMRMediaRemoteNowPlayingInfoTypeAudio'
 trackNumber        int    1
 elapsedTime        float  2.794
@@ -138,9 +139,9 @@ bundleIdentifier   str    'com.spotify.client'
 processIdentifier  int    836
 artworkData        str    <171188 chars base64>
 artworkMimeType    str    'image/jpeg'
-title              str    'Not Like Us'
+title              str    '<track>'
 duration           float  274.192
-artist             str    'Kendrick Lamar'
+artist             str    '<artist>'
 playing            bool   False
 ```
 
@@ -271,7 +272,7 @@ The only sanctioned adjacent surface is `NSAppleEventsUsageDescription` plus per
 
 ### Primary: `mediaremote-adapter`, `stream` mode, bundled in-app
 
-It is the only option that satisfies the LOCKED decision in `OPINIONS.md` ("read system-wide Now Playing, not Spotify-only"), it pushes rather than polls, it delivers artwork bytes directly, and it needs zero permission prompts.
+It is the only option that satisfies the LOCKED decision in `DECISIONS.md` ("read system-wide Now Playing, not Spotify-only"), it pushes rather than polls, it delivers artwork bytes directly, and it needs zero permission prompts.
 
 Integration: use the **`ejbills/mediaremote-adapter` fork**, a real SwiftPM package. The upstream README endorses it: "For a maintained Swift package look at this excellent fork".
 
@@ -306,7 +307,7 @@ Not a replacement, a degradation. Covers Spotify and Apple Music only, polls, an
 ### Rejected
 
 - Raw MediaRemote: dead, VERIFIED.
-- Spotify Web API: OAuth, network dependency, one app only. Already rejected in `OPINIONS.md`.
+- Spotify Web API: OAuth, network dependency, one app only. Already rejected in `DECISIONS.md`.
 - Accessibility-API scraping of player UIs: needs an Accessibility TCC prompt, breaks on every player redesign.
 
 ---

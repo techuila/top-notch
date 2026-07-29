@@ -5,4 +5,12 @@ DerivedData/
 .DS_Store
 *.xcuserstate
 .claude/worktrees/
+.claude/settings.local.json
 Vendor/
+
+# Never commit local credentials or signing material.
+.env
+.env.*
+*.p12
+*.mobileprovision
+ExportOptions.plist

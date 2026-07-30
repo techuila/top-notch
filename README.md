@@ -3,10 +3,14 @@
 A macOS notch app. Now Playing, a temporary file shelf, encrypted quick notes and a
 pomodoro, all living in the MacBook notch.
 
-TopNotch has no dock icon, no window and no menu bar item. When nothing is happening it
-retracts to exactly the hardware dimensions of the notch and disappears. When music is
-playing it grows a shoulder on each side of the camera housing for album art and a live
-waveform. Move the cursor near it and it opens into a panel.
+TopNotch has no dock icon and no window. When nothing is happening it retracts to exactly
+the hardware dimensions of the notch and disappears. When music is playing it grows a
+shoulder on each side of the camera housing for album art and a live waveform. Move the
+cursor near it and it opens into a panel.
+
+A single menu bar item holds the settings: open the notch, launch at login, quit. It
+launches at login by default, and that can be turned off from the menu or from System
+Settings under Login Items.
 
 > Status: early. It builds and runs, but it has not been released, signed for
 > distribution or tested on more than one machine.
@@ -84,7 +88,7 @@ Everything stays on your Mac. There is no network code, no analytics and no acco
 | Notes | `~/Library/Application Support/<bundle id>/`, AES-GCM sealed |
 | Note keys | Login keychain: one everyday key, one key behind a `SecAccessControl` that the Secure Enclave will not release without a live Touch ID match |
 | Dropped files | `~/Library/Caches/<bundle id>/DropShelf`, expiring copies |
-| Pomodoro state | `UserDefaults` |
+| Pomodoro state, focused pane, launch-at-login flag | `UserDefaults` |
 
 Note bodies are sealed with AES-GCM and bound to authenticated context carrying the format
 version, the note id and the privacy flag, so a ciphertext cannot be moved between notes or

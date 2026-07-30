@@ -68,9 +68,18 @@ slot machine. They never cross-fade, which would violate the move-don't-swap rul
 already parked on the left is skipped so nothing appears twice. If there is nothing to show,
 the slot collapses to zero width and the notch narrows.
 
-**Focus rule.** Music playing means the notch focuses Music. Music not playing means the notch
-focuses whatever pane is active, for example a running pomodoro. Opening the notch lands on the
-focused pane.
+**Focus rule.** The notch stays on the pane the user last landed on, closed or open, and
+remembers it across launches. Opening the notch lands on that pane.
+
+Music is the only exception. When playback starts it takes focus, because a track starting is
+about the machine rather than about a pane somebody picked. It never does so under an open
+panel: the switch waits until the notch has been closed for three seconds, and reopening the
+panel restarts that wait. It fires once per track starting, so choosing another pane while
+music plays sticks, and a deliberate choice cancels a switch that is still waiting.
+
+Superseded on 2026-07-30: the original rule recomputed focus live from whichever live pane had
+the highest priority, so the notch moved off the user's choice on its own and moved back the
+moment music stopped. Priority now only breaks ties between simultaneous claims.
 
 Rejected: a dot cluster for pending items (needs a hover to decode, no live values); giving
 every feature its own permanent shoulder (notch width becomes unpredictable).
@@ -101,3 +110,25 @@ Notes are **public by default** and open with no prompt at all. Any individual n
 marked private, and a private note requires Touch ID to open. This mirrors Apple Notes.
 
 Rejected: locking the entire notes feature behind Touch ID (too much friction for a scratchpad).
+
+### Menu bar item and settings - **LOCKED**
+There is one status item in the menu bar, and it is the only chrome outside the notch. It holds
+the basic settings and preferences: open the notch, launch at login, quit.
+
+It exists because settings have to live somewhere findable. The app has no dock icon and no
+window, so without it there is no way to turn launch-at-login off from inside the app.
+
+Supersedes the earlier "no dock icon, no main window and no menu bar item" position, which was
+written before anything needed a setting.
+
+### Launch at login - **LOCKED**
+On by default, registered through `SMAppService.mainApp`. The notch is only worth anything if it
+is already there, and an app you have to remember to start is one you stop using.
+
+The default is applied exactly once, on first launch. After that the user's choice stands,
+including one made in System Settings rather than in our menu. The menu re-reads the real
+registration state every time it opens, so it can never claim the app starts at login when
+macOS says otherwise.
+
+Rejected: a `LaunchAgent` plist (invisible to the user in System Settings, and orphaned if the
+app is deleted); a separate helper target (a whole extra bundle to sign and ship for one bool).

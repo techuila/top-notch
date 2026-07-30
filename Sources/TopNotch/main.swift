@@ -6,11 +6,12 @@ import PaneFocus
 import PaneMusic
 import PaneNotes
 
-/// TopNotch has no dock icon, no main window and no menu bar item by default.
-/// It is the notch, and nothing else.
+/// TopNotch has no dock icon and no main window. It is the notch, plus one status item
+/// holding the handful of settings that have to live somewhere a user can find them.
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var controller: NotchController?
+    private var menuBar: MenuBarItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let drop = DropPane()
@@ -30,6 +31,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         controller.start()
         self.controller = controller
+
+        // On by default, applied once. See `LoginItem`.
+        LoginItem.applyDefaultOnFirstLaunch()
+        menuBar = MenuBarItem { [weak controller] in controller?.present() }
     }
 
     func applicationWillTerminate(_ notification: Notification) {

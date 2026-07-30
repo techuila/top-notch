@@ -40,6 +40,12 @@ public final class NotchController {
 
     // MARK: Public entry points
 
+    /// Opens the panel on whatever pane the notch is currently about.
+    public func present() {
+        guard let model else { return }
+        present(model.focusedID)
+    }
+
     /// Opens the panel and lands on `pane`. Used by anything that has to reveal a feature
     /// without a hover, most obviously a file drag arriving at the notch.
     public func present(_ pane: PaneID) {

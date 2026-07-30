@@ -54,11 +54,21 @@ public enum IdleItem: Equatable, Sendable {
 /// pomodoro owns the outer-left slot permanently, the focused pane supplies the inner-left
 /// identity, and everything else queues into the rotating right slot.
 public struct IdleSignal: Equatable, Sendable {
-    /// True when this pane has live state worth focusing on. Drives the focus rule.
+    /// True when this pane has live state worth focusing on.
     public var isLive: Bool
 
-    /// Higher wins when several panes are live. Music is 100, a running pomodoro is 90.
+    /// Breaks the tie when more than one pane claims focus at the same moment.
+    /// Music is 100, a running pomodoro is 90.
     public var priority: Int
+
+    /// Whether this pane going live should pull the notch's focus onto it.
+    ///
+    /// The notch otherwise stays on whichever pane the user last chose, so this is the one
+    /// way a pane may override that, and it costs the user a deliberate choice. Only music
+    /// sets it: a track starting is about the whole notch rather than about a pane somebody
+    /// picked. The shell applies it once, on the transition into live, and never again
+    /// while the pane stays live.
+    public var claimsFocus: Bool
 
     /// Claims the permanent outer-left slot. Only a running pomodoro may set this.
     public var pinnedLeading: IdleItem?
@@ -87,6 +97,7 @@ public struct IdleSignal: Equatable, Sendable {
     public init(
         isLive: Bool,
         priority: Int,
+        claimsFocus: Bool = false,
         pinnedLeading: IdleItem? = nil,
         identity: IdleItem? = nil,
         rotating: IdleItem? = nil,
@@ -95,6 +106,7 @@ public struct IdleSignal: Equatable, Sendable {
     ) {
         self.isLive = isLive
         self.priority = priority
+        self.claimsFocus = claimsFocus
         self.pinnedLeading = pinnedLeading
         self.identity = identity
         self.rotating = rotating

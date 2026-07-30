@@ -34,6 +34,13 @@ public enum Motion {
     /// Grace period before collapsing after the cursor leaves, so a slip does not close it.
     public static let closeGrace: Duration = .milliseconds(140)
 
+    /// How long the notch must sit closed before a pane's focus claim is applied.
+    ///
+    /// The wait exists so the notch never changes what it is about while somebody is
+    /// looking at it. An open panel does not count down at all: the clock starts when the
+    /// panel closes, and reopening it starts the wait over.
+    public static let focusClaimDelay: Duration = .seconds(3)
+
     /// Resolves to `nil` when the user has asked for reduced motion, which makes
     /// `withAnimation(Motion.reduced(.morph))` a no-op transition.
     public static func reduced(_ animation: Animation) -> Animation? {

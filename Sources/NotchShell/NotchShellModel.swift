@@ -35,16 +35,42 @@ final class NotchShellModel {
         didSet {
             guard let id = scrollTarget, id != oldValue else { return }
             if phase == .expanded { setActive(id) }
+            landedByUser(id)
         }
     }
+
+    /// The pane the notch is about: what the idle bar draws for, and where opening lands.
+    ///
+    /// Sticky, and remembered across launches. It moves when the user lands on a pane, and
+    /// otherwise only when a pane claims it under the rules in `applyClaim`.
+    private(set) var focusedID: PaneID
 
     /// The pane that has had `activate()` called without a matching `deactivate()`.
     private var activated: PaneID?
 
-    init(panes: [any NotchPane], geometry: NotchGeometry) {
+    /// Panes that were live the last time claims were evaluated, so a claim can be applied
+    /// on the transition into live rather than for as long as the pane stays live.
+    private var liveLast: Set<PaneID> = []
+
+    /// A claim waiting for the notch to be closed long enough to apply it.
+    private var pendingClaim: PaneID?
+    private var claimTask: Task<Void, Never>?
+
+    private let defaults: UserDefaults
+    private static let focusedKey = "shell.focusedPane"
+
+    init(panes: [any NotchPane], geometry: NotchGeometry, defaults: UserDefaults = .standard) {
         self.panes = panes
         self.geometry = geometry
-        self.scrollTarget = panes.first?.id
+        self.defaults = defaults
+
+        let remembered = defaults.string(forKey: Self.focusedKey).flatMap(PaneID.init(rawValue:))
+        let start = remembered.flatMap { id in panes.first { $0.id == id }?.id }
+            ?? panes.first?.id ?? .music
+        self.focusedID = start
+        self.scrollTarget = start
+
+        trackClaims()
     }
 
     var landed: PaneID { scrollTarget ?? panes.first?.id ?? .music }
@@ -57,23 +83,106 @@ final class NotchShellModel {
         panes.first { $0.id == id }
     }
 
-    /// The live pane with the highest priority, else the first pane. This is the focus rule:
-    /// music playing wins, otherwise whatever else is live, otherwise nothing is live and
-    /// the notch simply opens where it always does.
-    var focusedID: PaneID {
-        var bestID: PaneID?
-        var bestPriority = Int.min
-        for pane in panes {
-            let signal = pane.idle
-            guard signal.isLive, signal.priority > bestPriority else { continue }
-            bestPriority = signal.priority
-            bestID = pane.id
-        }
-        return bestID ?? panes.first?.id ?? .music
-    }
-
     var landedContentHeight: CGFloat {
         pane(landed)?.contentHeight ?? Metrics.defaultPaneHeight
+    }
+
+    // MARK: Focus
+
+    /// The user landing on a pane is the strongest signal there is, so it takes focus at
+    /// once and throws away anything a pane was waiting to claim. Landing back on the pane
+    /// the notch is already about is not a choice and changes nothing, which is what keeps
+    /// merely opening the panel from cancelling a claim.
+    private func landedByUser(_ id: PaneID) {
+        guard id != focusedID else { return }
+        cancelClaim()
+        focus(id)
+    }
+
+    private func focus(_ id: PaneID) {
+        guard id != focusedID else { return }
+        focusedID = id
+        defaults.set(id.rawValue, forKey: Self.focusedKey)
+    }
+
+    /// Re-arms itself after every change to any pane's signal.
+    ///
+    /// Observation, not polling: with nothing playing and nothing running this costs
+    /// exactly nothing, which is the only way a rule like this is allowed to exist in an
+    /// app that sits on screen all day.
+    private func trackClaims() {
+        withObservationTracking {
+            for pane in panes {
+                let signal = pane.idle
+                _ = (signal.isLive, signal.claimsFocus, signal.priority)
+            }
+        } onChange: { [weak self] in
+            // `onChange` fires before the write lands, so the new values are read back on
+            // the next main-actor turn rather than here.
+            Task { @MainActor [weak self] in
+                self?.evaluateClaims()
+                self?.trackClaims()
+            }
+        }
+    }
+
+    /// Turns "this pane just went live" into at most one claim.
+    private func evaluateClaims() {
+        var candidates: [(id: PaneID, priority: Int)] = []
+
+        for pane in panes {
+            let signal = pane.idle
+            let wasLive = liveLast.contains(pane.id)
+
+            if signal.isLive, !wasLive {
+                liveLast.insert(pane.id)
+                if signal.claimsFocus { candidates.append((pane.id, signal.priority)) }
+            } else if !signal.isLive, wasLive {
+                liveLast.remove(pane.id)
+                // Nothing to switch to any more.
+                if pendingClaim == pane.id { cancelClaim() }
+            }
+        }
+
+        guard let winner = candidates.max(by: { $0.priority < $1.priority })?.id else { return }
+        guard winner != focusedID else { return }
+        arm(winner)
+    }
+
+    private func arm(_ id: PaneID) {
+        pendingClaim = id
+        startClaimCountdown()
+    }
+
+    /// Waits out `Motion.focusClaimDelay` and applies the claim, unless the panel is open.
+    ///
+    /// An open panel does not run the clock at all. The countdown is restarted by
+    /// `setPhase` when the panel closes, so waiting on the user costs no timer however
+    /// long they leave it open.
+    private func startClaimCountdown() {
+        guard pendingClaim != nil, phase != .expanded else { return }
+        claimTask?.cancel()
+        claimTask = Task { [weak self] in
+            try? await Task.sleep(for: Motion.focusClaimDelay)
+            guard !Task.isCancelled else { return }
+            self?.applyClaim()
+        }
+    }
+
+    private func applyClaim() {
+        claimTask = nil
+        guard let id = pendingClaim, phase != .expanded else { return }
+        pendingClaim = nil
+        withAnimation(Motion.reduced(Motion.slot)) {
+            focus(id)
+            scrollTarget = id
+        }
+    }
+
+    private func cancelClaim() {
+        claimTask?.cancel()
+        claimTask = nil
+        pendingClaim = nil
     }
 
     var panelHeight: CGFloat {
@@ -170,8 +279,13 @@ final class NotchShellModel {
         phase = next
         if next == .expanded {
             setActive(landed)
-        } else if wasExpanded {
-            setActive(nil)
+            // A pending claim keeps waiting, but its clock stops while the panel is open
+            // and starts again from the top once it closes.
+            claimTask?.cancel()
+            claimTask = nil
+        } else {
+            if wasExpanded { setActive(nil) }
+            startClaimCountdown()
         }
     }
 
@@ -180,6 +294,7 @@ final class NotchShellModel {
     }
 
     func teardown() {
+        cancelClaim()
         setActive(nil)
         phase = .idle
     }

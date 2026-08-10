@@ -105,11 +105,17 @@ it works on macOS 26.5 before building on it, and fall back to per-app AppleScri
 Rejected: Spotify AppleScript only (no other players); Spotify Web API (needs OAuth, network,
 and only covers one app).
 
-### Quick notes encryption - **LOCKED**
-Notes are **public by default** and open with no prompt at all. Any individual note can be
-marked private, and a private note requires Touch ID to open. This mirrors Apple Notes.
+### Quick notes encryption - **SUPERSEDED**
+Notes are plain text with no encryption, no private flag and no Touch ID.
 
-Rejected: locking the entire notes feature behind Touch ID (too much friction for a scratchpad).
+Superseded on 2026-08-10: the original decision (public by default, per-note Touch ID
+privacy mirroring Apple Notes) died in the field. The Developer ID build could not reach
+the keychain without a keychain-access-groups entitlement, and the owner chose dropping
+the feature over chasing entitlements. Old encrypted note files are skipped unread and
+left untouched on disk.
+
+Rejected: locking the entire notes feature behind Touch ID (too much friction); fixing
+the entitlement to keep per-note privacy (not worth it for a scratchpad).
 
 ### Menu bar item and settings - **LOCKED**
 There is one status item in the menu bar, and it is the only chrome outside the notch. It holds
@@ -132,3 +138,25 @@ macOS says otherwise.
 
 Rejected: a `LaunchAgent` plist (invisible to the user in System Settings, and orphaned if the
 app is deleted); a separate helper target (a whole extra bundle to sign and ship for one bool).
+
+### Autoupdates - **LOCKED**
+Sparkle 2, checking automatically and installing in the background. The appcast is
+generated in CI, signed with an EdDSA key held as a GitHub secret, and attached to every
+release; the feed URL resolves through `releases/latest/download` so the newest release is
+always the feed. The menu shows the running version as a disabled first item and offers a
+manual "Check for Updates".
+
+Rejected: no updater (direct-download apps get no update channel for free, and a notch app
+nobody reopens the release page for would rot); a custom updater (Sparkle is the standard
+and handles signing, deltas and rollback-safe installs).
+
+### Drop shelf filenames - **LOCKED**
+Hovering a file chip shows the full filename in the standard macOS tooltip. Truncated
+names are otherwise unreadable and the chip has no room to grow.
+
+### DMG appearance - **LOCKED**
+The installer window is styled: the notch motif at top, the production background art with
+an arrow from app to Applications, 660x400 window, 128px icons. Laid out by create-dmg in
+release.sh; the art is rendered deterministically by render-dmg-background.swift.
+
+Rejected: a bare white Finder window (reads as unfinished next to every other Mac app).

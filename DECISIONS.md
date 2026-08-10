@@ -52,9 +52,32 @@ border, exactly like the idle presentation, so playback stays visible everywhere
 instance always; it travels between border and scrubber as the user changes panes.
 
 ### Panel material - **LOCKED**
-Liquid Glass, the native macOS 26 material: translucent, blurred, saturated, with a specular
-edge highlight. The idle notch stays pure black so it reads as hardware; the material
-transitions to glass on expand.
+Liquid Glass, the native macOS 26 material, is the default: translucent, blurred, with a
+specular edge highlight. The idle notch stays pure black so it reads as hardware; the
+material transitions in on expand.
+
+Amended on 2026-08-11: the user can pick the panel surface from the menu bar item's
+Appearance submenu - Liquid Glass (default), Gradient (accent colour melting down into
+glass), or Solid (warm near-black). Stored in defaults, applied live. The idle black is
+not affected by the choice.
+
+### Palette - **LOCKED**
+Teenage Engineering OP-1 / EP-133 KO II: warm off-white ink, one loud orange (the only
+shout, owned by pomodoro and the house accent), warm greys, black. Minimalist
+modern-retro. Notes wear a soft orange, drop a warm grey, so colour still identifies a
+signal at idle without leaving the palette. Set 2026-08-11, replacing the blue/purple
+accents.
+
+### Notch silhouette - **LOCKED**
+The top corners are inverted: where the black surface meets the top screen edge it flares
+outward with a small concave curve, like the hardware notch photographed from below. One
+persistent shape in every state. Set 2026-08-11.
+
+### App icon - **LOCKED**
+DynamicLake style: the notch is the whole mark - a black top band with the flared pill,
+cream album tile, orange waveform and progress line, on the palette's warm off-white, plus
+one orange dot. Rendered deterministically by publishing/scripts/render-icon.swift. Set
+2026-08-11, replacing the dark screen-edge icon.
 
 ### Motion - **LOCKED**
 Everything animates. Spring easing, roughly `cubic-bezier(.22, 1.08, .36, 1)` at ~0.46s for

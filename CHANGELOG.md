@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.0](https://github.com/techuila/top-notch/compare/v0.1.1...v0.2.0) (2026-08-10)
+
+
+### Features
+
+* add sparkle autoupdater and version menu item ([95168b4](https://github.com/techuila/top-notch/commit/95168b417d8ca8004355b7ef3071c62bbab90fca))
+* **drop:** show full filename tooltip on hover ([c75a376](https://github.com/techuila/top-notch/commit/c75a3763427225947b7088cc2f8c8fe5c17bc625))
+* **notes:** replace encrypted notes with plain text ([182878d](https://github.com/techuila/top-notch/commit/182878d3afdcac859209025dd34cc87bc961d0cb))
+* **release:** styled dmg window and signed appcast in ci ([fbc993d](https://github.com/techuila/top-notch/commit/fbc993dea06217aa2bc38429de348a3f207cfa53))
+
+
+### Bug Fixes
+
+* **shell:** single travelling elements, own pane heights, no scrollbar ([362fd54](https://github.com/techuila/top-notch/commit/362fd54cb376a7545702131cb4a6d5eefbe49586))
+
 ## [0.1.1](https://github.com/techuila/top-notch/compare/v0.1.0...v0.1.1) (2026-08-10)
 
 

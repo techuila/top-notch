@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/techuila/top-notch/compare/v0.2.0...v0.3.0) (2026-08-10)
+
+
+### Features
+
+* **music:** synthesized visualizer with shuffle and repeat ([3e2fb95](https://github.com/techuila/top-notch/commit/3e2fb95eb4b2d9ef6ab70b610d8a935075a658af))
+* **shell:** bigger idle, spaced pills, retained focus, border progress ([f617fa1](https://github.com/techuila/top-notch/commit/f617fa15b3cb6a8629756c5fe1ba5c78d69f6ae9))
+
 ## [0.2.0](https://github.com/techuila/top-notch/compare/v0.1.1...v0.2.0) (2026-08-10)
 
 

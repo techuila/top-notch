@@ -41,10 +41,10 @@ Releases are automated by `.github/workflows/release-please.yml`:
 3. The `dmg` job then builds on a macOS 26 runner, signs with Developer ID, notarizes,
    staples, and attaches `TopNotch-<version>.dmg` plus a `.sha256` file to the release.
 
-The first release is pinned to `0.1.0` by `release-as` in `release-please-config.json`.
-**Delete that line after v0.1.0 ships**, or every release will be 0.1.0.
-
 `scripts/release.sh` still works standalone for a local release if CI is ever down.
+If a release exists but its DMG build failed, fix main and run the workflow manually
+(Actions, release, "Run workflow") with the release tag; it rebuilds from main and
+attaches the DMG to that release.
 
 ### Repository secrets the workflow needs
 

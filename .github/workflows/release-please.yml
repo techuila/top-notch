@@ -7,6 +7,14 @@ name: release
 on:
   push:
     branches: [main]
+  # Rebuild the DMG for an existing release, e.g. after a pipeline fix. Builds main,
+  # so only use it while main matches what the release tag shipped.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to attach the DMG to
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -18,6 +26,7 @@ concurrency:
 
 jobs:
   release-please:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
@@ -31,7 +40,7 @@ jobs:
 
   dmg:
     needs: release-please
-    if: needs.release-please.outputs.release_created == 'true'
+    if: ${{ !cancelled() && (needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch') }}
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
@@ -96,7 +105,7 @@ jobs:
       - name: Attach the DMG to the release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ needs.release-please.outputs.tag_name }}
+          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || needs.release-please.outputs.tag_name }}
         run: |
           DMG="$(ls build/release/TopNotch-*.dmg)"
           shasum -a 256 "$DMG" > "$DMG.sha256"

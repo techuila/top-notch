@@ -4,7 +4,7 @@
     ".": {
       "release-type": "simple",
       "package-name": "TopNotch",
-      "release-as": "0.1.0",
+      "include-component-in-tag": false,
       "extra-files": [
         {
           "type": "generic",

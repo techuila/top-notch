@@ -133,6 +133,19 @@ public actor AppleScriptSource: NowPlayingSource {
         case .previous: body = "previous track"
         case .seek(let seconds):
             body = "set player position to \(String(format: "%.3f", max(seconds, 0)))"
+        case .setShuffle(let on):
+            body = switch kind {
+            case .spotify: "set shuffling to \(on)"
+            case .appleMusic: "set shuffle enabled to \(on)"
+            }
+        case .setRepeat(let mode):
+            body = switch kind {
+            // Spotify's dictionary has a single `repeating` bool, no repeat-one, so
+            // `.one` clamps to off and the user's cycle degrades to a plain toggle
+            // rather than sticking on a mode Spotify cannot show.
+            case .spotify: "set repeating to \(mode == .all)"
+            case .appleMusic: "set song repeat to \(mode.rawValue)"
+            }
         }
 
         let reuse: Bool
@@ -310,7 +323,9 @@ public actor AppleScriptSource: NowPlayingSource {
                 status: snapshot.status,
                 elapsed: snapshot.elapsed,
                 capturedAt: snapshot.capturedAt,
-                player: snapshot.kind.identity
+                player: snapshot.kind.identity,
+                shuffle: snapshot.shuffle,
+                repeatMode: snapshot.repeatMode
             )
         } else {
             state = .idle
@@ -436,10 +451,38 @@ public actor AppleScriptSource: NowPlayingSource {
         let identifier = kind == .spotify
             ? "(id of theTrack) as text"
             : "(persistent ID of theTrack) as text"
+        // Shuffle and repeat ride the same round trip. Wrapped in `try` so a player
+        // version that drops either property degrades to empty fields, which the parser
+        // reads as unknown and the UI reads as "hide the buttons".
+        let modes = switch kind {
+        case .spotify:
+            """
+            try
+            \tset shuffleField to (shuffling as text)
+            \tif repeating then
+            \t\tset repeatField to "all"
+            \telse
+            \t\tset repeatField to "off"
+            \tend if
+            end try
+            """
+        case .appleMusic:
+            """
+            try
+            \tset shuffleField to (shuffle enabled as text)
+            \tset repeatField to "off"
+            \tset theRepeat to song repeat
+            \tif theRepeat is one then set repeatField to "one"
+            \tif theRepeat is all then set repeatField to "all"
+            end try
+            """
+        }
         return wrap(
             """
             set sep to (character id 31)
             set extraField to ""
+            set shuffleField to ""
+            set repeatField to ""
             set theState to player state as text
             if theState is not "playing" and theState is not "paused" then return "stopped"
             set thePosition to 0
@@ -451,9 +494,11 @@ public actor AppleScriptSource: NowPlayingSource {
             try
             \tset theID to \(identifier)
             end try\(extra)
+            \(modes)
             return theState & sep & theID & sep & (name of theTrack) & sep & \
             (artist of theTrack) & sep & (album of theTrack) & sep & \
-            ((duration of theTrack) as text) & sep & (thePosition as text) & sep & extraField
+            ((duration of theTrack) as text) & sep & (thePosition as text) & sep & \
+            extraField & sep & shuffleField & sep & repeatField
             """,
             for: kind
         )
@@ -511,6 +556,12 @@ public actor AppleScriptSource: NowPlayingSource {
             duration: duration,
             artwork: previous?.track?.id == id ? previous?.track?.artwork : nil
         )
+        // Fields 8 and 9 arrive empty when the player refused the read, and a snapshot
+        // from an older script simply lacks them. Both parse to nil, never to a guess.
+        if fields.count >= 10 {
+            snapshot.shuffle = Bool(fields[8])
+            snapshot.repeatMode = RepeatMode(rawValue: fields[9])
+        }
         return snapshot
     }
 }
@@ -524,6 +575,9 @@ private struct PlayerSnapshot: Sendable {
     var elapsed: TimeInterval = 0
     var capturedAt: Date = .distantPast
     var updatedAt: Date = .distantPast
+    /// Read by the state script, kept across broadcasts, which never carry either.
+    var shuffle: Bool?
+    var repeatMode: RepeatMode?
 
     init(kind: PlayerKind) { self.kind = kind }
 

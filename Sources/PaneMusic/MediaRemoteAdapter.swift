@@ -83,6 +83,22 @@ enum MRCommand: Int, Sendable {
     case previousTrack = 5
 }
 
+/// Shuffle modes, as the adapter's `shuffle` subcommand takes them and as the payload's
+/// `shuffleMode` reports them.
+enum MRShuffleMode: Int, Sendable {
+    case disabled = 1
+    case albums = 2
+    case tracks = 3
+}
+
+/// Repeat modes, as the adapter's `repeat` subcommand takes them and as the payload's
+/// `repeatMode` reports them.
+enum MRRepeatMode: Int, Sendable {
+    case disabled = 1
+    case track = 2
+    case playlist = 3
+}
+
 /// One decoded now-playing payload from the adapter.
 ///
 /// Field names match the adapter's JSON exactly. `duration` and `elapsedTime` are
@@ -100,6 +116,11 @@ struct AdapterPayload: Decodable, Sendable, Equatable {
     var contentItemIdentifier: String?
     var artworkData: Data?
     var artworkMimeType: String?
+    /// `MRShuffleMode` raw value. Absent when the playing app does not report shuffle,
+    /// which is the signal to hide the control.
+    var shuffleMode: Int?
+    /// `MRRepeatMode` raw value, same contract as `shuffleMode`.
+    var repeatMode: Int?
 
     var isEmpty: Bool { self == AdapterPayload() }
 }

@@ -158,6 +158,12 @@ private struct TransportBlock: View {
                 .foregroundStyle(Style.inkMuted)
 
                 HStack(spacing: 0) {
+                    ModeButton(
+                        symbol: "shuffle",
+                        available: state.shuffle != nil,
+                        selected: state.shuffle == true,
+                        label: state.shuffle == true ? "Shuffle on" : "Shuffle off"
+                    ) { pane.toggleShuffle() }
                     NotchButton("backward.fill", size: 12) { pane.previous() }
                         .accessibilityLabel("Previous track")
                     NotchButton(state.status == .playing ? "pause.fill" : "play.fill", size: 16) {
@@ -166,9 +172,45 @@ private struct TransportBlock: View {
                     .accessibilityLabel(state.status == .playing ? "Pause" : "Play")
                     NotchButton("forward.fill", size: 12) { pane.next() }
                         .accessibilityLabel("Next track")
+                    ModeButton(
+                        symbol: state.repeatMode == .one ? "repeat.1" : "repeat",
+                        available: state.repeatMode != nil,
+                        selected: (state.repeatMode ?? .off) != .off,
+                        label: repeatLabel
+                    ) { pane.cycleRepeat() }
                 }
             }
         }
+    }
+
+    private var repeatLabel: String {
+        switch state.repeatMode ?? .off {
+        case .off: "Repeat off"
+        case .all: "Repeat all"
+        case .one: "Repeat one"
+        }
+    }
+}
+
+/// Shuffle or repeat: a toggle that exists only when the active source can read the
+/// state it would show. When it cannot, the slot collapses to zero width and the
+/// transport slides together, the same move the trailing waveform makes, rather than
+/// the button vanishing in place.
+private struct ModeButton: View {
+    let symbol: String
+    let available: Bool
+    let selected: Bool
+    let label: String
+    let action: () -> Void
+
+    var body: some View {
+        NotchButton(symbol, size: 10, isSelected: selected, action: action)
+            .frame(width: available ? nil : 0)
+            .opacity(available ? 1 : 0)
+            .allowsHitTesting(available)
+            .notchAnimation(Motion.content, value: available)
+            .accessibilityLabel(label)
+            .accessibilityHidden(!available)
     }
 }
 

@@ -91,6 +91,18 @@ public final class MusicPane: NotchPane {
     func previous() { coordinator.send(.previous) }
     func seek(fraction: Double) { coordinator.seek(fraction: fraction) }
 
+    /// Explicit state, computed here from the last read, so the command cannot race a
+    /// second tap the way a blind toggle would.
+    func toggleShuffle() {
+        coordinator.send(.setShuffle(!(coordinator.state.shuffle ?? false)))
+    }
+
+    /// Cycles off, all, one, the order every player's own UI uses. Sources without a
+    /// repeat-one clamp the `.one` step, which turns the cycle into a plain toggle.
+    func cycleRepeat() {
+        coordinator.send(.setRepeat((coordinator.state.repeatMode ?? .off).next))
+    }
+
     // MARK: Observation
 
     /// Re-arms itself on every change. Cheaper than a timer and it fires exactly when the
@@ -135,17 +147,30 @@ public final class MusicPane: NotchPane {
     // MARK: Ticking
 
     /// 12fps with the pane on screen, 6fps behind the closed notch where the waveform is
-    /// 16pt tall, and nothing at all when paused or stopped.
+    /// 16pt tall, and nothing at all when paused, stopped, or under Reduce Motion.
     private var tickInterval: TimeInterval? {
-        guard coordinator.state.status == .playing, notchVisible else { return nil }
+        guard coordinator.state.status == .playing, notchVisible, !reduceMotion else { return nil }
         return isActive ? 1.0 / 12.0 : 1.0 / 6.0
+    }
+
+    /// `Motion.reduced` is the one sanctioned reading of the system setting. Checked
+    /// when the ticker is synced, not per frame, and there is no ticker to check it on
+    /// while reduced, so a live settings flip lands on the next state change.
+    private var reduceMotion: Bool {
+        if case .none = Motion.reduced(Motion.ambient) { return true }
+        return false
     }
 
     private func syncTicker() {
         guard let interval = tickInterval else {
             ticker?.invalidate()
             ticker = nil
-            if levels != Waveform.flat { levels = Waveform.flat }
+            // Under Reduce Motion a playing track holds one static mid-song shape:
+            // "audio is moving" said without motion, at the cost of zero timers.
+            let resting = coordinator.state.status == .playing && notchVisible && reduceMotion
+                ? Waveform.steady
+                : Waveform.flat
+            if levels != resting { levels = resting }
             return
         }
         if let ticker, abs(ticker.timeInterval - interval) < 0.001 { return }

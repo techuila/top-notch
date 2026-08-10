@@ -113,6 +113,16 @@ public actor SystemNowPlayingSource: NowPlayingSource {
             // The adapter takes microseconds here, and only here.
             let micros = Int(max(seconds, 0) * 1_000_000)
             AdapterProcess.detached(location, ["seek", String(micros)])
+        case .setShuffle(let on):
+            let mode: MRShuffleMode = on ? .tracks : .disabled
+            AdapterProcess.detached(location, ["shuffle", String(mode.rawValue)])
+        case .setRepeat(let repeatMode):
+            let mode: MRRepeatMode = switch repeatMode {
+            case .off: .disabled
+            case .one: .track
+            case .all: .playlist
+            }
+            AdapterProcess.detached(location, ["repeat", String(mode.rawValue)])
         }
     }
 
@@ -219,6 +229,17 @@ public actor SystemNowPlayingSource: NowPlayingSource {
             elapsed: elapsed,
             capturedAt: capturedAt
         )
+        // Absent modes stay nil, which reads as "this player does not do shuffle" and
+        // hides the controls, exactly right for a podcast or a browser tab.
+        state.shuffle = payload.shuffleMode.map { $0 != MRShuffleMode.disabled.rawValue }
+        state.repeatMode = payload.repeatMode.flatMap {
+            switch MRRepeatMode(rawValue: $0) {
+            case .disabled: .off
+            case .track: .one
+            case .playlist: .all
+            case nil: nil
+            }
+        }
         if let bundleID = payload.bundleIdentifier {
             state.player = PlayerIdentity(id: bundleID, name: await Self.appName(for: bundleID))
         }

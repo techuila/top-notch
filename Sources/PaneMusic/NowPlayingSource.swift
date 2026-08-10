@@ -59,6 +59,23 @@ public enum NowPlayingIssue: Equatable, Sendable {
     case automationDenied(player: String)
 }
 
+/// Repeat, in the order every player's own UI cycles it: off, the whole list, one track.
+///
+/// Raw values are the AppleScript enumerator names for Music's `song repeat`, which is
+/// deliberate: the script text is `rawValue` and nothing needs a mapping table.
+public enum RepeatMode: String, Equatable, Sendable {
+    case off, all, one
+
+    /// The mode a repeat button advances to from here.
+    public var next: RepeatMode {
+        switch self {
+        case .off: .all
+        case .all: .one
+        case .one: .off
+        }
+    }
+}
+
 /// A single observation of what is playing.
 ///
 /// `elapsed` is the position at `capturedAt`, not at read time. Sources emit only when
@@ -71,6 +88,11 @@ public struct NowPlayingState: Equatable, Sendable {
     public var capturedAt: Date
     public var player: PlayerIdentity?
     public var issue: NowPlayingIssue?
+    /// `nil` means this source cannot read shuffle for the active player, and the UI
+    /// hides the button rather than showing a control that lies.
+    public var shuffle: Bool?
+    /// Same contract as `shuffle`: `nil` hides the control.
+    public var repeatMode: RepeatMode?
 
     public init(
         track: NowPlayingTrack? = nil,
@@ -78,7 +100,9 @@ public struct NowPlayingState: Equatable, Sendable {
         elapsed: TimeInterval = 0,
         capturedAt: Date = .distantPast,
         player: PlayerIdentity? = nil,
-        issue: NowPlayingIssue? = nil
+        issue: NowPlayingIssue? = nil,
+        shuffle: Bool? = nil,
+        repeatMode: RepeatMode? = nil
     ) {
         self.track = track
         self.status = status
@@ -86,6 +110,8 @@ public struct NowPlayingState: Equatable, Sendable {
         self.capturedAt = capturedAt
         self.player = player
         self.issue = issue
+        self.shuffle = shuffle
+        self.repeatMode = repeatMode
     }
 
     /// Nothing loaded anywhere.
@@ -118,6 +144,13 @@ public enum TransportCommand: Equatable, Sendable {
     case previous
     /// Absolute position in seconds.
     case seek(TimeInterval)
+    /// Explicit shuffle state, not a toggle, so a repeated tap cannot get out of sync
+    /// with a state the source reads back asynchronously.
+    case setShuffle(Bool)
+    /// Explicit repeat mode. Sources that cannot express `.one` clamp it to `.off`,
+    /// which keeps the cycle finite for the user instead of wedging on a mode the
+    /// player does not have.
+    case setRepeat(RepeatMode)
 }
 
 /// How closely the UI is watching.

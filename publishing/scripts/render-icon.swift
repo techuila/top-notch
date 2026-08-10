@@ -1,8 +1,9 @@
-// Renders the TopNotch app icon: the notch itself, drawn as hardware.
+// Renders the TopNotch app icon: the notch as the whole mark, DynamicLake style, on the
+// Teenage Engineering palette. Warm off-white card, one black notch pill with inverted
+// top corners, orange waveform bars and a progress line inside it. Nothing else.
 //
 // A macOS icon supplies its own rounded-square canvas with margins; the system does not
-// mask it. The design is the top edge of a dark display with the notch cut into it and
-// the app's three accent colours as idle content beside it, which is the app in one shape.
+// mask it.
 //
 // Usage: swift render-icon.swift <output-dir>
 // Writes icon_1024.png into <output-dir>.
@@ -12,6 +13,11 @@ import Foundation
 
 let size: CGFloat = 1024
 let out = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "."
+
+// The palette, mirrored from NotchCore.Style by hand.
+let cream = NSColor(calibratedRed: 0.93, green: 0.92, blue: 0.89, alpha: 1)
+let black = NSColor(calibratedRed: 0.07, green: 0.068, blue: 0.065, alpha: 1)
+let orange = NSColor(calibratedRed: 1.00, green: 0.30, blue: 0.00, alpha: 1)
 
 let image = NSImage(size: NSSize(width: size, height: size), flipped: false) { _ in
     guard let ctx = NSGraphicsContext.current?.cgContext else { return false }
@@ -26,107 +32,140 @@ let image = NSImage(size: NSSize(width: size, height: size), flipped: false) { _
     ctx.setShadow(
         offset: CGSize(width: 0, height: -14),
         blur: 44,
-        color: NSColor.black.withAlphaComponent(0.35).cgColor
+        color: NSColor.black.withAlphaComponent(0.30).cgColor
     )
     let cardPath = CGPath(roundedRect: card, cornerWidth: radius, cornerHeight: radius, transform: nil)
     ctx.addPath(cardPath)
-    ctx.setFillColor(NSColor(calibratedWhite: 0.09, alpha: 1).cgColor)
+    ctx.setFillColor(cream.cgColor)
     ctx.fillPath()
     ctx.restoreGState()
 
-    // Background: a deep vertical gradient, near-black at the top where the notch lives.
     ctx.saveGState()
     ctx.addPath(cardPath)
     ctx.clip()
+
+    // A whisper of vertical shading so the card reads as moulded plastic, not flat paper.
     let bg = CGGradient(
         colorsSpace: CGColorSpaceCreateDeviceRGB(),
         colors: [
-            NSColor(calibratedRed: 0.13, green: 0.14, blue: 0.19, alpha: 1).cgColor,
-            NSColor(calibratedRed: 0.05, green: 0.05, blue: 0.08, alpha: 1).cgColor,
+            cream.cgColor,
+            NSColor(calibratedRed: 0.88, green: 0.87, blue: 0.84, alpha: 1).cgColor,
         ] as CFArray,
         locations: [0, 1]
     )!
     ctx.drawLinearGradient(
         bg,
-        start: CGPoint(x: size / 2, y: card.minY),
-        end: CGPoint(x: size / 2, y: card.maxY),
+        start: CGPoint(x: size / 2, y: card.maxY),
+        end: CGPoint(x: size / 2, y: card.minY),
         options: []
     )
 
-    // The notch: a black bar hanging from the card's top edge, bottom corners rounded,
-    // exactly the silhouette the app draws on screen.
-    let notchWidth: CGFloat = 450
-    let notchHeight: CGFloat = 175
-    let notchRadius: CGFloat = 72
-    let notch = CGMutablePath()
-    let nx = (size - notchWidth) / 2
-    let ny = card.maxY - notchHeight
-    notch.move(to: CGPoint(x: nx, y: card.maxY))
-    notch.addLine(to: CGPoint(x: nx, y: ny + notchRadius))
-    notch.addArc(
-        center: CGPoint(x: nx + notchRadius, y: ny + notchRadius),
-        radius: notchRadius, startAngle: .pi, endAngle: .pi * 1.5, clockwise: false
+    // The notch pill: hanging from the card's visual top, with the same inverted top
+    // corners the app draws on screen. Flares curve outward where it meets the top band.
+    let pillWidth: CGFloat = 620
+    let pillHeight: CGFloat = 260
+    let pillRadius: CGFloat = 96
+    let flare: CGFloat = 56
+    let pillTop = card.maxY - 128
+    let px = (size - pillWidth) / 2
+    let pillBottom = pillTop - pillHeight
+
+    let pill = CGMutablePath()
+    // Start at the left flare's outer tip on the top line.
+    pill.move(to: CGPoint(x: px - flare, y: pillTop))
+    // Concave curve inward and down into the left wall.
+    pill.addQuadCurve(
+        to: CGPoint(x: px, y: pillTop - flare),
+        control: CGPoint(x: px, y: pillTop)
     )
-    notch.addLine(to: CGPoint(x: nx + notchWidth - notchRadius, y: ny))
-    notch.addArc(
-        center: CGPoint(x: nx + notchWidth - notchRadius, y: ny + notchRadius),
-        radius: notchRadius, startAngle: .pi * 1.5, endAngle: 0, clockwise: false
+    pill.addLine(to: CGPoint(x: px, y: pillBottom + pillRadius))
+    pill.addArc(
+        tangent1End: CGPoint(x: px, y: pillBottom),
+        tangent2End: CGPoint(x: px + pillRadius, y: pillBottom),
+        radius: pillRadius
     )
-    notch.addLine(to: CGPoint(x: nx + notchWidth, y: card.maxY))
-    notch.closeSubpath()
-    ctx.addPath(notch)
-    ctx.setFillColor(NSColor.black.cgColor)
+    pill.addLine(to: CGPoint(x: px + pillWidth - pillRadius, y: pillBottom))
+    pill.addArc(
+        tangent1End: CGPoint(x: px + pillWidth, y: pillBottom),
+        tangent2End: CGPoint(x: px + pillWidth, y: pillBottom + pillRadius),
+        radius: pillRadius
+    )
+    pill.addLine(to: CGPoint(x: px + pillWidth, y: pillTop - flare))
+    // Concave curve up and outward onto the top line.
+    pill.addQuadCurve(
+        to: CGPoint(x: px + pillWidth + flare, y: pillTop),
+        control: CGPoint(x: px + pillWidth, y: pillTop)
+    )
+    pill.closeSubpath()
+
+    // The top band the pill hangs from, spanning the full card width: the screen edge.
+    ctx.setFillColor(black.cgColor)
+    ctx.fill(CGRect(x: card.minX, y: pillTop, width: card.width, height: card.maxY - pillTop))
+    ctx.addPath(pill)
     ctx.fillPath()
 
-    // A hairline of screen light along the top edge either side of the notch, so the
-    // black reads as a cutout in a display rather than a floating lozenge.
-    ctx.setFillColor(NSColor(calibratedWhite: 1, alpha: 0.16).cgColor)
-    ctx.fill(CGRect(x: card.minX, y: card.maxY - 4, width: nx - card.minX, height: 4))
-    ctx.fill(CGRect(x: nx + notchWidth, y: card.maxY - 4, width: card.maxX - nx - notchWidth, height: 4))
+    // Content sits between the pill's rounded corners.
+    let interiorLeft = px + pillRadius
+    let interiorRight = px + pillWidth - pillRadius
+    let contentMidY = pillBottom + pillHeight * 0.56
 
-    // Idle content in the shoulders: an artwork square on the left, waveform on the
-    // right, in the app's real accent colours.
-    let contentY = ny + (notchHeight - 66) / 2
-
-    // Artwork chip.
-    let art = CGRect(x: nx + 56, y: contentY, width: 66, height: 66)
-    let artPath = CGPath(roundedRect: art, cornerWidth: 19, cornerHeight: 19, transform: nil)
-    ctx.addPath(artPath)
-    ctx.setFillColor(NSColor(calibratedRed: 0.72, green: 0.66, blue: 1.00, alpha: 1).cgColor)
+    // Left: the album art tile, cream on black like a key on the EP-133.
+    let tileSize: CGFloat = 128
+    let tile = CGRect(
+        x: interiorLeft, y: contentMidY - tileSize / 2, width: tileSize, height: tileSize
+    )
+    ctx.addPath(CGPath(roundedRect: tile, cornerWidth: 30, cornerHeight: 30, transform: nil))
+    ctx.setFillColor(cream.cgColor)
     ctx.fillPath()
 
-    // Waveform: five bars, the house standard.
-    let barHeights: [CGFloat] = [26, 50, 66, 42, 30]
-    let barWidth: CGFloat = 14
-    let gap: CGFloat = 11
-    let waveWidth = CGFloat(barHeights.count) * barWidth + CGFloat(barHeights.count - 1) * gap
-    var bx = nx + notchWidth - 56 - waveWidth
+    // Right: five orange waveform bars, like music playing.
+    let barWidth: CGFloat = 26
+    let barGap: CGFloat = 22
+    let barHeights: [CGFloat] = [56, 100, 148, 88, 62]
+    let barsTotal = CGFloat(barHeights.count) * barWidth + CGFloat(barHeights.count - 1) * barGap
+    var bx = interiorRight - barsTotal
+    ctx.setFillColor(orange.cgColor)
     for h in barHeights {
-        let bar = CGRect(x: bx, y: ny + (notchHeight - h) / 2, width: barWidth, height: h)
+        let bar = CGRect(x: bx, y: contentMidY - h / 2, width: barWidth, height: h)
         ctx.addPath(CGPath(roundedRect: bar, cornerWidth: barWidth / 2, cornerHeight: barWidth / 2, transform: nil))
-        bx += barWidth + gap
+        bx += barWidth + barGap
     }
-    ctx.setFillColor(NSColor.white.cgColor)
     ctx.fillPath()
 
-    // The progress line along the notch bottom edge, in the pomodoro accent.
-    let line = CGRect(x: nx + 48, y: ny - 16, width: notchWidth - 112, height: 12)
-    ctx.addPath(CGPath(roundedRect: line, cornerWidth: 6, cornerHeight: 6, transform: nil))
-    ctx.setFillColor(NSColor(calibratedRed: 1.00, green: 0.62, blue: 0.29, alpha: 1).cgColor)
+    // The progress line along the pill's bottom edge, mostly played, in orange.
+    let lineY = pillBottom + 36
+    let lineWidth = interiorRight - interiorLeft
+    ctx.setFillColor(cream.withAlphaComponent(0.25).cgColor)
+    ctx.addPath(CGPath(
+        roundedRect: CGRect(x: interiorLeft, y: lineY, width: lineWidth, height: 12),
+        cornerWidth: 6, cornerHeight: 6, transform: nil
+    ))
+    ctx.fillPath()
+    ctx.setFillColor(orange.cgColor)
+    ctx.addPath(CGPath(
+        roundedRect: CGRect(x: interiorLeft, y: lineY, width: lineWidth * 0.62, height: 12),
+        cornerWidth: 6, cornerHeight: 6, transform: nil
+    ))
+    ctx.fillPath()
+
+    // A single small orange dot low right, the TE function-key wink that keeps the calm
+    // lower field from reading as unfinished.
+    ctx.setFillColor(orange.cgColor)
+    ctx.addEllipse(in: CGRect(x: card.maxX - 196, y: card.minY + 132, width: 64, height: 64))
     ctx.fillPath()
 
     ctx.restoreGState()
     return true
 }
 
-guard let tiff = image.tiffRepresentation,
-      let rep = NSBitmapImageRep(data: tiff),
-      let png = rep.representation(using: .png, properties: [:])
-else {
-    FileHandle.standardError.write(Data("error: could not render icon\n".utf8))
-    exit(1)
+var rect = CGRect(x: 0, y: 0, width: size, height: size)
+guard let cg = image.cgImage(forProposedRect: &rect, context: nil, hints: nil) else {
+    fatalError("could not rasterize icon")
 }
-
-let path = "\(out)/icon_1024.png"
-try png.write(to: URL(fileURLWithPath: path))
-print("wrote \(path)")
+let rep = NSBitmapImageRep(cgImage: cg)
+rep.size = NSSize(width: size, height: size)
+guard let png = rep.representation(using: .png, properties: [:]) else {
+    fatalError("could not encode png")
+}
+try! png.write(to: URL(fileURLWithPath: "\(out)/icon_1024.png"))
+print("wrote \(out)/icon_1024.png")

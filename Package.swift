@@ -12,6 +12,11 @@ let package = Package(
     products: [
         .executable(name: "TopNotch", targets: ["TopNotch"]),
     ],
+    dependencies: [
+        // Autoupdater. Ships as a prebuilt framework; bundle.sh embeds it and
+        // release.sh signs its nested pieces for notarization.
+        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.9.5"),
+    ],
     targets: [
         // Contracts, design tokens and motion. Owned by the orchestrator.
         // Feature modules read from it and never modify it.
@@ -28,8 +33,15 @@ let package = Package(
 
         .executableTarget(
             name: "TopNotch",
-            dependencies: ["NotchCore", "NotchShell", "PaneMusic", "PaneDrop", "PaneNotes", "PaneFocus"],
-            swiftSettings: swiftSettings
+            dependencies: [
+                "NotchCore", "NotchShell", "PaneMusic", "PaneDrop", "PaneNotes", "PaneFocus",
+                .product(name: "Sparkle", package: "Sparkle"),
+            ],
+            swiftSettings: swiftSettings,
+            linkerSettings: [
+                // The bundled app carries Sparkle.framework in Contents/Frameworks.
+                .unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"]),
+            ]
         ),
 
         // One test target per module that has anything worth testing. Both use `@testable`

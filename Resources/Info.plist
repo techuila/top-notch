@@ -18,8 +18,10 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>0.1.1</string><!-- x-release-please-version -->
+	<!-- Sparkle compares CFBundleVersion, so it tracks the marketing version and
+	     release-please bumps both lines together. -->
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>0.1.1</string><!-- x-release-please-version -->
 	<key>LSMinimumSystemVersion</key>
 	<string>26.0</string>
 	<!-- No dock icon, no app switcher entry. TopNotch is only the notch. -->
@@ -34,5 +36,16 @@
 	<!-- Controlling Spotify and Apple Music when the system route is unavailable. -->
 	<key>NSAppleEventsUsageDescription</key>
 	<string>TopNotch controls playback in Spotify and Apple Music from the notch.</string>
+	<!-- Sparkle autoupdates. The appcast is attached to every GitHub release, and the
+	     latest/download URL always resolves to the newest one. Updates download and
+	     install in the background. -->
+	<key>SUFeedURL</key>
+	<string>https://github.com/techuila/top-notch/releases/latest/download/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>YsddU+BS6zc0a729iMUotbUhfHg+X1vRo7QgUDzHhRo=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUAutomaticallyUpdate</key>
+	<true/>
 </dict>
 </plist>

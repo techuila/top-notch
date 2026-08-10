@@ -1,4 +1,5 @@
 import AppKit
+import Sparkle
 
 /// The status item, and the only chrome TopNotch has outside the notch itself.
 ///
@@ -15,11 +16,13 @@ final class MenuBarItem: NSObject, NSMenuDelegate {
     private let menu = NSMenu()
     private let onOpen: () -> Void
 
+    private let versionItem = NSMenuItem()
     private let openItem = NSMenuItem()
     private let launchItem = NSMenuItem()
+    private let updateItem = NSMenuItem()
     private let quitItem = NSMenuItem()
 
-    init(onOpen: @escaping () -> Void) {
+    init(updater: SPUStandardUpdaterController, onOpen: @escaping () -> Void) {
         self.item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         self.onOpen = onOpen
         super.init()
@@ -32,9 +35,19 @@ final class MenuBarItem: NSObject, NSMenuDelegate {
         // bar, a dark one, and whatever wallpaper is behind a translucent one.
         item.button?.image?.isTemplate = true
 
+        // No target and no action keeps it permanently disabled: a label, not a control.
+        let version = Bundle.main.object(
+            forInfoDictionaryKey: "CFBundleShortVersionString"
+        ) as? String
+        versionItem.title = "Version \(version ?? "dev")"
+
         openItem.title = "Open TopNotch"
         openItem.target = self
         openItem.action = #selector(open)
+
+        updateItem.title = "Check for Updates…"
+        updateItem.target = updater
+        updateItem.action = #selector(SPUStandardUpdaterController.checkForUpdates(_:))
 
         launchItem.target = self
         launchItem.action = #selector(toggleLaunchAtLogin)
@@ -45,9 +58,12 @@ final class MenuBarItem: NSObject, NSMenuDelegate {
         quitItem.action = #selector(quit)
 
         menu.delegate = self
+        menu.addItem(versionItem)
+        menu.addItem(.separator())
         menu.addItem(openItem)
         menu.addItem(.separator())
         menu.addItem(launchItem)
+        menu.addItem(updateItem)
         menu.addItem(.separator())
         menu.addItem(quitItem)
         item.menu = menu

@@ -37,6 +37,16 @@ else
   echo "warning: adapter unavailable, app will fall back to AppleScript" >&2
 fi
 
+# Sparkle arrives prebuilt through SPM. The executable links it at @rpath, which
+# resolves to Contents/Frameworks inside the bundle, so it must be embedded here.
+SPARKLE="$(find "$ROOT/.build/artifacts" -type d -name "Sparkle.framework" -not -path "*dSYM*" | head -n 1)"
+if [ -z "$SPARKLE" ]; then
+  echo "error: Sparkle.framework not found in .build/artifacts; run swift build first" >&2
+  exit 1
+fi
+cp -R "$SPARKLE" "$APP/Contents/Frameworks/"
+codesign --force --deep --sign - "$APP/Contents/Frameworks/Sparkle.framework"
+
 # Ad-hoc signature is enough to run locally. Distribution signing lives elsewhere.
 #
 # This must NOT fall back to signing without entitlements. A malformed entitlements

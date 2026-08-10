@@ -56,6 +56,7 @@ attaches the DMG to that release.
 | `APPLE_ID` | Apple ID email for notarization |
 | `APPLE_TEAM_ID` | 10-character team ID |
 | `APPLE_APP_PASSWORD` | App-specific password from https://appleid.apple.com |
+| `SPARKLE_ED_PRIVATE_KEY` | EdDSA private key that signs the Sparkle appcast (public half lives in Info.plist as `SUPublicEDKey`; a backup copy sits in the owner's keychain as "Private key for signing Sparkle updates") |
 
 ## What only you can do, in order
 
@@ -76,7 +77,5 @@ attaches the DMG to that release.
 
 - A landing page (the privacy policy needs a public URL for the Homebrew audit anyway;
   the raw GitHub file works meanwhile).
-- Sparkle or similar for in-app updates; direct-download apps get no update channel for
-  free.
 - Test the notarized build on a second Mac with a clean Gatekeeper: first launch must
   show the normal "downloaded from the internet" dialog, not a block.

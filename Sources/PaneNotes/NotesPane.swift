@@ -3,10 +3,8 @@ import SwiftUI
 
 /// Quick notes in the notch.
 ///
-/// Notes are public by default and open with no prompt. Any single note can be marked
-/// private, and a private note needs Touch ID to read or edit. Both kinds are encrypted on
-/// disk, with separate keys and separate access policies, so a stolen disk reveals nothing
-/// either way while a public note stays a scratchpad.
+/// Notes are plain text: they open with no prompt and persist as ordinary files. There is
+/// no lock, no Touch ID and no Keychain use anywhere in this pane.
 @MainActor
 @Observable
 public final class NotesPane: NotchPane {
@@ -51,12 +49,11 @@ public final class NotesPane: NotchPane {
         AnyView(NotesPaneView(store: store))
     }
 
-    public func activate() {
-        store.resolveTitlesIfNeeded()
-    }
+    /// Nothing to start: notes load once at init and there are no observers or timers.
+    public func activate() {}
 
-    /// The pane scrolled away or the notch closed. Save what is in the editor, then put
-    /// any private note back behind Touch ID.
+    /// The pane scrolled away or the notch closed. Save what is in the editor, then
+    /// return to the list.
     public func deactivate() {
         store.standDown()
     }

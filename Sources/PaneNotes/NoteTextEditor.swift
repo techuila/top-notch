@@ -141,8 +141,8 @@ final class NoteEditorHost: NSView {
         textView.textColor = Style.Hosted.ink
         textView.insertionPointColor = Style.Hosted.ink
         textView.textContainerInset = NSSize(width: 2, height: 4)
-        // A scratchpad, and a private one. Nothing here should be sent to the spelling
-        // or completion machinery, and nothing should rewrite what was typed.
+        // A scratchpad. Nothing here should be sent to the spelling or completion
+        // machinery, and nothing should rewrite what was typed.
         textView.isContinuousSpellCheckingEnabled = false
         textView.isGrammarCheckingEnabled = false
         textView.isAutomaticQuoteSubstitutionEnabled = false

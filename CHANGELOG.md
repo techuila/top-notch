@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.0](https://github.com/techuila/top-notch/compare/v0.3.1...v0.4.0) (2026-08-10)
+
+
+### Features
+
+* appearance submenu with liquid glass, gradient and solid ([ccae830](https://github.com/techuila/top-notch/commit/ccae830f3aabf7c84b408710db9321db5d045795))
+* **core:** teenage engineering palette and panel material modes ([ef33fec](https://github.com/techuila/top-notch/commit/ef33fec2195dd9b77d51fd2ff9b7812d001fee78))
+* dynamiclake style icon on the te palette ([5273837](https://github.com/techuila/top-notch/commit/527383709aa8786ef061d4ed38bf78de5d997bbb))
+* landing page with seo, served from docs on github pages ([44c61c7](https://github.com/techuila/top-notch/commit/44c61c7f512186642da27d1a0baedaabc4ecd167))
+* **shell:** inverted top corner flares on the notch silhouette ([497e00f](https://github.com/techuila/top-notch/commit/497e00f776ef9b2a5636a0dc87dfde13ab2afccb))
+
 ## [0.3.1](https://github.com/techuila/top-notch/compare/v0.3.0...v0.3.1) (2026-08-10)
 
 

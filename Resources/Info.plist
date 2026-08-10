@@ -17,11 +17,11 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.3.1</string><!-- x-release-please-version -->
+	<string>0.4.0</string><!-- x-release-please-version -->
 	<!-- Sparkle compares CFBundleVersion, so it tracks the marketing version and
 	     release-please bumps both lines together. -->
 	<key>CFBundleVersion</key>
-	<string>0.3.1</string><!-- x-release-please-version -->
+	<string>0.4.0</string><!-- x-release-please-version -->
 	<key>LSMinimumSystemVersion</key>
 	<string>26.0</string>
 	<!-- No dock icon, no app switcher entry. TopNotch is only the notch. -->

@@ -53,9 +53,10 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          SPARKLE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
         run: |
           missing=""
-          for var in CERT_P12 CERT_PASSWORD SIGN_IDENTITY APPLE_ID APPLE_TEAM_ID APPLE_APP_PASSWORD; do
+          for var in CERT_P12 CERT_PASSWORD SIGN_IDENTITY APPLE_ID APPLE_TEAM_ID APPLE_APP_PASSWORD SPARKLE_KEY; do
             [ -n "${!var}" ] || missing="$missing $var"
           done
           if [ -n "$missing" ]; then
@@ -68,6 +69,9 @@ jobs:
         run: |
           sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -n 1)"
           xcodebuild -version
+
+      - name: Install create-dmg
+        run: brew install create-dmg
 
       - name: Import Developer ID certificate
         env:
@@ -102,11 +106,27 @@ jobs:
           SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
         run: ./publishing/scripts/release.sh "$SIGN_IDENTITY"
 
-      - name: Attach the DMG to the release
+      - name: Generate the Sparkle appcast
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || needs.release-please.outputs.tag_name }}
+        run: |
+          curl -sfL "https://github.com/sparkle-project/Sparkle/releases/download/2.9.5/Sparkle-2.9.5.tar.xz" \
+            -o "$RUNNER_TEMP/sparkle.tar.xz"
+          mkdir -p "$RUNNER_TEMP/sparkle"
+          tar -xf "$RUNNER_TEMP/sparkle.tar.xz" -C "$RUNNER_TEMP/sparkle"
+          printf '%s' "$SPARKLE_ED_PRIVATE_KEY" > "$RUNNER_TEMP/sparkle_ed.key"
+          "$RUNNER_TEMP/sparkle/bin/generate_appcast" \
+            --ed-key-file "$RUNNER_TEMP/sparkle_ed.key" \
+            --download-url-prefix "https://github.com/techuila/top-notch/releases/download/$TAG/" \
+            -o build/release/appcast.xml build/release
+          rm "$RUNNER_TEMP/sparkle_ed.key"
+
+      - name: Attach the DMG and appcast to the release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || needs.release-please.outputs.tag_name }}
         run: |
           DMG="$(ls build/release/TopNotch-*.dmg)"
           shasum -a 256 "$DMG" > "$DMG.sha256"
-          gh release upload "$TAG" "$DMG" "$DMG.sha256" --clobber
+          gh release upload "$TAG" "$DMG" "$DMG.sha256" build/release/appcast.xml --clobber

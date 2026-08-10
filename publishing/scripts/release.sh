@@ -46,6 +46,21 @@ if [ -d "$APP/Contents/Frameworks/MediaRemoteAdapter.framework" ]; then
     "$APP/Contents/MacOS/MediaRemoteAdapterTestClient"
 fi
 
+# Sparkle's nested executables are signed innermost-first, per its sandboxing guide.
+# The Downloader XPC keeps its own entitlements, so preserve them.
+if [ -d "$APP/Contents/Frameworks/Sparkle.framework" ]; then
+  SPARKLE="$APP/Contents/Frameworks/Sparkle.framework"
+  codesign --force --options runtime --timestamp --sign "$IDENTITY" \
+    "$SPARKLE/Versions/B/XPCServices/Installer.xpc"
+  codesign --force --options runtime --timestamp --preserve-metadata=entitlements \
+    --sign "$IDENTITY" "$SPARKLE/Versions/B/XPCServices/Downloader.xpc"
+  codesign --force --options runtime --timestamp --sign "$IDENTITY" \
+    "$SPARKLE/Versions/B/Autoupdate"
+  codesign --force --options runtime --timestamp --sign "$IDENTITY" \
+    "$SPARKLE/Versions/B/Updater.app"
+  codesign --force --options runtime --timestamp --sign "$IDENTITY" "$SPARKLE"
+fi
+
 codesign --force --options runtime --timestamp \
   --entitlements "$ROOT/Resources/TopNotch.entitlements" \
   --sign "$IDENTITY" "$APP"
@@ -59,8 +74,22 @@ DMG="$OUT/TopNotch-$VERSION.dmg"
 STAGE="$OUT/dmg-stage"
 mkdir -p "$STAGE"
 cp -R "$APP" "$STAGE/"
-ln -s /Applications "$STAGE/Applications"
-hdiutil create -volname "TopNotch" -srcfolder "$STAGE" -ov -format UDZO "$DMG" >/dev/null
+
+# create-dmg drives Finder to lay out the window: background art, icon positions, the
+# Applications link. Coordinates are icon centers measured from the window's top left
+# and must stay in step with publishing/scripts/render-dmg-background.swift.
+command -v create-dmg >/dev/null \
+  || { echo "error: create-dmg not installed (brew install create-dmg)" >&2; exit 1; }
+create-dmg \
+  --volname "TopNotch" \
+  --background "$ROOT/publishing/dmg/background.tiff" \
+  --window-size 660 400 \
+  --icon-size 128 \
+  --icon "TopNotch.app" 180 170 \
+  --app-drop-link 480 170 \
+  --hide-extension "TopNotch.app" \
+  --no-internet-enable \
+  "$DMG" "$STAGE"
 rm -rf "$STAGE"
 
 # The DMG carries its own signature; without it the spctl assessment below rejects the

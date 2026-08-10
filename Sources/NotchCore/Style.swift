@@ -9,33 +9,36 @@ public enum Style {
 
     // MARK: Colour
 
-    /// Primary text and icons on the panel.
-    public static let ink = Color.white
+    /// The palette is Teenage Engineering's OP-1 / EP-133 world: warm white, one loud
+    /// orange, warm greys, black. Minimalist modern-retro; orange is the only shout.
+
+    /// Primary text and icons on the panel. Warm white, not pure white.
+    public static let ink = Color(red: 0.94, green: 0.93, blue: 0.90)
     /// Secondary text: artist names, captions, timestamps.
-    public static let inkMuted = Color.white.opacity(0.56)
+    public static let inkMuted = ink.opacity(0.58)
     /// Tertiary: uppercase labels, hairlines, inactive pills.
-    public static let inkFaint = Color.white.opacity(0.45)
+    public static let inkFaint = ink.opacity(0.45)
 
     /// Fill behind a resting control such as an inactive pill or a tile.
-    public static let fill = Color.white.opacity(0.07)
+    public static let fill = ink.opacity(0.07)
     /// Fill behind a hovered control.
-    public static let fillHover = Color.white.opacity(0.13)
+    public static let fillHover = ink.opacity(0.13)
     /// Fill behind the selected pill. Deliberately near-opaque so it reads as selected
     /// against glass without needing an accent colour.
-    public static let fillActive = Color.white.opacity(0.92)
+    public static let fillActive = ink.opacity(0.92)
     /// Text on `fillActive`.
-    public static let onActive = Color(white: 0.07)
+    public static let onActive = Color(red: 0.08, green: 0.075, blue: 0.07)
 
     /// Divider and dashed drop-target strokes.
-    public static let hairline = Color.white.opacity(0.14)
-    public static let dashed = Color.white.opacity(0.26)
+    public static let hairline = ink.opacity(0.14)
+    public static let dashed = ink.opacity(0.26)
 
-    /// Semantic accents. These are the only chromatic colours in the app, and each
-    /// belongs to exactly one feature so colour alone identifies a signal at idle.
-    public static let focusAccent = Color(red: 1.00, green: 0.62, blue: 0.29)   // pomodoro
-    public static let dropAccent  = Color(red: 0.44, green: 0.78, blue: 1.00)   // drop shelf
-    public static let notesAccent = Color(red: 0.72, green: 0.66, blue: 1.00)   // quick notes
-    public static let danger      = Color(red: 1.00, green: 0.42, blue: 0.38)
+    /// Semantic accents. Orange is the house accent; the others are quiet warm tones so
+    /// colour still identifies a signal at idle without leaving the TE palette.
+    public static let focusAccent = Color(red: 1.00, green: 0.30, blue: 0.00)   // pomodoro, TE orange
+    public static let dropAccent  = Color(red: 0.78, green: 0.76, blue: 0.72)   // drop shelf, warm grey
+    public static let notesAccent = Color(red: 1.00, green: 0.68, blue: 0.44)   // quick notes, soft orange
+    public static let danger      = Color(red: 1.00, green: 0.26, blue: 0.19)
 
     public static func accent(for pane: PaneID) -> Color {
         switch pane {
@@ -81,11 +84,48 @@ public enum Style {
         /// Pairs with `Style.body`.
         public static let body = NSFont.systemFont(ofSize: 12.5, weight: .regular)
         /// Pairs with `Style.ink`.
-        public static let ink = NSColor.white
+        public static let ink = NSColor(red: 0.94, green: 0.93, blue: 0.90, alpha: 1)
         /// Pairs with `Style.inkMuted`.
-        public static let inkMuted = NSColor.white.withAlphaComponent(0.56)
+        public static let inkMuted = ink.withAlphaComponent(0.58)
         /// Pairs with `Style.inkFaint`.
-        public static let inkFaint = NSColor.white.withAlphaComponent(0.45)
+        public static let inkFaint = ink.withAlphaComponent(0.45)
+    }
+}
+
+// MARK: - Appearance
+
+/// How the expanded panel is dressed. The idle notch is always black regardless; this
+/// only governs the open panel's surface.
+public enum MaterialMode: String, CaseIterable, Sendable {
+    case liquidGlass
+    case gradient
+    case solid
+
+    public var title: String {
+        switch self {
+        case .liquidGlass: "Liquid Glass"
+        case .gradient: "Gradient"
+        case .solid: "Solid"
+        }
+    }
+}
+
+/// The user's appearance choice, persisted and observable. The menu writes it, the shell
+/// reads it, and a change re-renders the panel live.
+@MainActor
+@Observable
+public final class Appearance {
+    public static let shared = Appearance()
+
+    private static let key = "style.material"
+
+    public var material: MaterialMode {
+        didSet { UserDefaults.standard.set(material.rawValue, forKey: Self.key) }
+    }
+
+    private init() {
+        material = UserDefaults.standard.string(forKey: Self.key)
+            .flatMap(MaterialMode.init(rawValue:)) ?? .liquidGlass
     }
 }
 
@@ -103,6 +143,7 @@ public struct NotchMaterial: ViewModifier {
     }
 
     public func body(content: Content) -> some View {
+        let mode = Appearance.shared.material
         content
             .background {
                 let shape = UnevenRoundedRectangle(
@@ -111,21 +152,44 @@ public struct NotchMaterial: ViewModifier {
                     style: .continuous
                 )
                 ZStack {
-                    // Black base is always present. Glass fades in over it, so the two
-                    // states cross-dissolve in place instead of swapping materials.
+                    // Black base is always present. The chosen surface fades in over it,
+                    // so the states cross-dissolve in place instead of swapping.
                     shape.fill(.black)
-                    shape.fill(.ultraThinMaterial)
-                        .environment(\.colorScheme, .dark)
+
+                    // Liquid Glass, the real macOS 26 material. Also the base layer of
+                    // the gradient mode, where colour melts down into glass.
+                    if mode != .solid {
+                        shape.fill(.clear)
+                            .glassEffect(.regular, in: shape)
+                            .opacity(isExpanded ? 1 : 0)
+                    }
+                    if mode == .gradient {
+                        shape.fill(
+                            LinearGradient(
+                                stops: [
+                                    .init(color: Style.focusAccent.opacity(0.32), location: 0),
+                                    .init(color: Style.focusAccent.opacity(0.10), location: 0.35),
+                                    .init(color: .clear, location: 0.7),
+                                ],
+                                startPoint: .top, endPoint: .bottom
+                            )
+                        )
                         .opacity(isExpanded ? 1 : 0)
-                    shape.fill(Color.white.opacity(isExpanded ? 0.04 : 0))
+                    }
+                    if mode == .solid {
+                        shape.fill(Color(red: 0.10, green: 0.095, blue: 0.09))
+                            .opacity(isExpanded ? 1 : 0)
+                    }
+                    shape.fill(Style.ink.opacity(isExpanded ? 0.03 : 0))
                 }
                 .overlay {
-                    // Specular top edge, the tell that makes glass read as glass.
+                    // Specular top edge, the tell that makes glass read as glass. The
+                    // solid mode keeps a quieter version so the panel still has an edge.
                     shape.stroke(
                         LinearGradient(
                             colors: [
-                                .white.opacity(isExpanded ? 0.24 : 0),
-                                .white.opacity(isExpanded ? 0.06 : 0),
+                                Style.ink.opacity(isExpanded ? (mode == .solid ? 0.14 : 0.24) : 0),
+                                Style.ink.opacity(isExpanded ? 0.06 : 0),
                             ],
                             startPoint: .top, endPoint: .bottom
                         ),

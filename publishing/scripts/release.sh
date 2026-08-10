@@ -63,6 +63,10 @@ ln -s /Applications "$STAGE/Applications"
 hdiutil create -volname "TopNotch" -srcfolder "$STAGE" -ov -format UDZO "$DMG" >/dev/null
 rm -rf "$STAGE"
 
+# The DMG carries its own signature; without it the spctl assessment below rejects the
+# image with "no usable signature" even when the app inside is notarized.
+codesign --force --timestamp --sign "$IDENTITY" "$DMG"
+
 echo "submitting $DMG for notarization..."
 xcrun notarytool submit "$DMG" --keychain-profile "$PROFILE" --wait
 

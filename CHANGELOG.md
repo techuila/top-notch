@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/techuila/top-notch/compare/v0.1.0...v0.1.1) (2026-08-10)
+
+
+### Bug Fixes
+
+* **release:** sign the dmg so its primary signature verifies ([bc8cc23](https://github.com/techuila/top-notch/commit/bc8cc23d0a1a56ef35d7d06d72f2086358b3ef05))
+
 ## 0.1.0 (2026-08-10)
 
 

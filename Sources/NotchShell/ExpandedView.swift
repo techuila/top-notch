@@ -23,9 +23,20 @@ struct ExpandedView: View {
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .overlay(alignment: .topLeading) { artworkAnchor }
-        .overlay(alignment: .topTrailing) { waveformAnchor }
+        .overlay(alignment: .topLeading) {
+            if model.landed == .music { artworkAnchor }
+        }
+        .overlay(alignment: .topTrailing) {
+            if model.landed == .music { waveformAnchor }
+        }
         .overlay(alignment: .bottom) { progressAnchor }
+    }
+
+    /// The music pane's content band. The travelling elements hand off to the pane's own
+    /// artwork, waveform and scrubber on open, so the anchors sit where that pane lays
+    /// them out: leading and trailing at the pane inset, centred in its content height.
+    private var musicContentHeight: CGFloat {
+        model.pane(.music)?.contentHeight ?? Metrics.defaultPaneHeight
     }
 
     private var artworkAnchor: some View {
@@ -35,7 +46,10 @@ struct ExpandedView: View {
                 id: NotchTravelID.artwork.rawValue, in: namespace, isSource: true
             )
             .padding(.leading, Metrics.paneInset)
-            .padding(.top, Metrics.paneTop)
+            .padding(
+                .top,
+                Metrics.paneTop + max((musicContentHeight - ShellMetrics.expandedArtwork) / 2, 0)
+            )
             .allowsHitTesting(false)
     }
 
@@ -46,7 +60,10 @@ struct ExpandedView: View {
                 id: NotchTravelID.waveform.rawValue, in: namespace, isSource: true
             )
             .padding(.trailing, Metrics.paneInset)
-            .padding(.top, Metrics.paneTop)
+            .padding(
+                .top,
+                Metrics.paneTop + max((musicContentHeight - ShellMetrics.expandedWaveHeight) / 2, 0)
+            )
             .allowsHitTesting(false)
     }
 
@@ -110,7 +127,8 @@ struct PillView: View {
 }
 
 /// Horizontally paging pane host. Snap comes from `.viewAligned`, momentum from the real
-/// scroll view underneath, and the indicator is never drawn.
+/// scroll view underneath, and the indicator is never drawn: `.never`, not `.hidden`,
+/// because `.hidden` still yields to the system-wide "Always show scroll bars" setting.
 struct PaneHost: View {
     @Bindable var model: NotchShellModel
 
@@ -119,15 +137,16 @@ struct PaneHost: View {
             ScrollView(.horizontal) {
                 // Identity must be `PaneID` itself, not `PaneID.id`, or the scroll position
                 // binding has nothing to match against and programmatic jumps do nothing.
-                LazyHStack(spacing: 0) {
+                // Top alignment so a pane taller than the landed one hangs below the host
+                // and is clipped there, never shoved up under the pill row.
+                LazyHStack(alignment: .top, spacing: 0) {
                     ForEach(model.order, id: \.self) { id in
                         PaneSlot(model: model, id: id)
-                            .frame(width: Metrics.expandedWidth)
                     }
                 }
                 .scrollTargetLayout()
             }
-            .scrollIndicators(.hidden, axes: [.horizontal, .vertical])
+            .scrollIndicators(.never, axes: [.horizontal, .vertical])
             .scrollTargetBehavior(.viewAligned)
             .scrollPosition(id: $model.scrollTarget)
             .task {
@@ -149,9 +168,18 @@ struct PaneHost: View {
 
 /// Wraps a pane's own content. The `AnyView` is forced by the `NotchPane` contract and is
 /// confined to the expanded path, never the idle bar.
+///
+/// Each slot is exactly as tall as its own pane's declared content height, not the landed
+/// pane's. Squeezing every slot to the landed height centred any taller neighbour and cut
+/// it off at the top; at its own height a pane always fits once it lands, and mid-swipe a
+/// taller neighbour is clipped only at the bottom until the panel morphs up to meet it.
 struct PaneSlot: View {
     let model: NotchShellModel
     let id: PaneID
+
+    private var height: CGFloat {
+        model.pane(id)?.contentHeight ?? Metrics.defaultPaneHeight
+    }
 
     var body: some View {
         Group {
@@ -161,6 +189,7 @@ struct PaneSlot: View {
                 Color.clear
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(width: Metrics.expandedWidth, height: height, alignment: .top)
+        .notchAnimation(Motion.morph, value: height)
     }
 }

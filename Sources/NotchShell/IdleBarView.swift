@@ -106,9 +106,14 @@ struct RotorView: View {
     }
 }
 
-/// The three persistent elements, rendered once and positioned by matched geometry.
-/// They are the same views in both states, which is what makes the open look like a move
-/// rather than a swap.
+/// The three travelling elements, rendered by the shell while the notch is closed.
+///
+/// Exactly one instance of each exists at any moment: while idle or in proximity these
+/// are the rendered views, matched to the idle anchors. The moment the panel opens the
+/// music pane's own artwork, waveform and scrubber take over, and these leave through
+/// the matched-geometry anchors in `ExpandedView`, which sit where the pane lays those
+/// elements out. Rendering both at once is what put a second artwork tile and a second
+/// progress line on screen.
 struct TravelLayer: View {
     let model: NotchShellModel
     let namespace: Namespace.ID
@@ -116,30 +121,32 @@ struct TravelLayer: View {
     var body: some View {
         let artwork = model.travellingArtwork
         ZStack(alignment: .topLeading) {
-            if artwork.present {
-                ArtworkView(image: artwork.image)
-                    .matchedGeometryEffect(
-                        id: NotchTravelID.artwork.rawValue, in: namespace, isSource: false
+            if model.phase != .expanded {
+                if artwork.present {
+                    ArtworkView(image: artwork.image)
+                        .matchedGeometryEffect(
+                            id: NotchTravelID.artwork.rawValue, in: namespace, isSource: false
+                        )
+                }
+                if let levels = model.travellingWaveform {
+                    WaveformView(levels: levels)
+                        .matchedGeometryEffect(
+                            id: NotchTravelID.waveform.rawValue, in: namespace, isSource: false
+                        )
+                }
+                if let progress = model.composition.progress {
+                    NotchProgress(
+                        value: progress,
+                        height: Metrics.idleProgressHeight,
+                        tint: Style.accent(for: model.focusedID),
+                        // Music's accent is plain white. At full strength on a black notch
+                        // that is a glowing stub, not a progress line.
+                        prominence: 0.25
                     )
-            }
-            if let levels = model.travellingWaveform {
-                WaveformView(levels: levels)
                     .matchedGeometryEffect(
-                        id: NotchTravelID.waveform.rawValue, in: namespace, isSource: false
+                        id: NotchTravelID.progress.rawValue, in: namespace, isSource: false
                     )
-            }
-            if let progress = model.composition.progress {
-                NotchProgress(
-                    value: progress,
-                    height: Metrics.idleProgressHeight,
-                    tint: Style.accent(for: model.focusedID),
-                    // Music's accent is plain white. At full strength on a black notch
-                    // that is a glowing stub, not a progress line.
-                    prominence: model.phase == .expanded ? 1 : 0.25
-                )
-                .matchedGeometryEffect(
-                    id: NotchTravelID.progress.rawValue, in: namespace, isSource: false
-                )
+                }
             }
         }
         .allowsHitTesting(false)

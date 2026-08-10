@@ -13,12 +13,14 @@ enum ShellMetrics {
     /// Headroom above the tallest pane so a pane can grow without resizing the window.
     static let heightHeadroom: CGFloat = 120
 
-    /// Where the album art lands once the panel is open.
-    static let expandedArtwork: CGFloat = 56
+    /// Where the album art lands once the panel is open: the artwork tile the music pane
+    /// lays out at its leading edge. Must match that tile or the travel overshoots it.
+    static let expandedArtwork: CGFloat = 74
 
-    /// Where the waveform lands once the panel is open.
-    static let expandedWaveWidth: CGFloat = 64
-    static let expandedWaveHeight: CGFloat = 22
+    /// Where the waveform lands once the panel is open: the trailing waveform slot the
+    /// music pane lays out. Must match that slot for the same reason.
+    static let expandedWaveWidth: CGFloat = 26
+    static let expandedWaveHeight: CGFloat = 46
 
     /// Pill row spacing and horizontal text inset.
     static let pillSpacing: CGFloat = 6

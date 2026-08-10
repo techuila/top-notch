@@ -143,7 +143,7 @@ public final class NotchController {
     private func dragBand(in bounds: CGRect) -> CGRect {
         let hardware = model?.geometry.hardwareWidth ?? NotchGeometry.synthetic.hardwareWidth
         let width = hardware + ShellMetrics.dragCatchMargin * 2
-        let height = Metrics.idleHeight + ShellMetrics.dragCatchMargin
+        let height = ShellMetrics.idleHeight + ShellMetrics.dragCatchMargin
         return CGRect(
             x: bounds.midX - width / 2,
             y: bounds.maxY - height,
@@ -165,7 +165,8 @@ public final class NotchController {
     private func panelSize(for screen: NSScreen) -> CGSize {
         let tallest = panes.map(\.contentHeight).max() ?? Metrics.defaultPaneHeight
         let content = max(tallest, Metrics.defaultPaneHeight) + ShellMetrics.heightHeadroom
-        let height = Metrics.panelHeight(forContent: content) + ShellMetrics.windowMargin
+        let height = Metrics.panelHeight(forContent: content)
+            + ShellMetrics.pillBreathingRoom + ShellMetrics.windowMargin
         let width = Metrics.expandedWidth + ShellMetrics.windowMargin * 2
         return CGSize(
             width: min(width, screen.frame.width),
@@ -294,12 +295,12 @@ public final class NotchController {
     /// The stable trigger zone: the hardware notch plus one shoulder each side. It does not
     /// move with the animation, so entering and leaving cannot chatter.
     private func triggerRect(panel: NSPanel, model: NotchShellModel) -> CGRect {
-        let width = model.geometry.hardwareWidth + Metrics.shoulderPadding * 2
+        let width = model.geometry.hardwareWidth + ShellMetrics.idleShoulderPadding * 2
         return CGRect(
             x: panel.frame.midX - width / 2,
-            y: panel.frame.maxY - Metrics.idleHeight,
+            y: panel.frame.maxY - ShellMetrics.idleHeight,
             width: width,
-            height: Metrics.idleHeight
+            height: ShellMetrics.idleHeight
         )
     }
 

@@ -1,4 +1,5 @@
 import CoreGraphics
+import NotchCore
 import QuartzCore
 
 /// Numbers the shell needs that `Metrics` does not define.
@@ -7,6 +8,36 @@ import QuartzCore
 /// panes share, which is why they live here. Every one of them is reported as a NotchCore
 /// gap; if a token appears upstream the local copy goes away.
 enum ShellMetrics {
+    /// The idle base, owner decision 2026-08-10: exactly the old proximity size, so the
+    /// bottom-edge progress line always clears the hardware cutout instead of being
+    /// swallowed by it. NotchCore gap: `Metrics.idleHeight` and `Metrics.shoulderPadding`
+    /// still hold the smaller base the design has moved off.
+    static let idleHeight: CGFloat = Metrics.proximityHeight
+    static let idleShoulderPadding: CGFloat = Metrics.proximityShoulderPadding
+
+    /// Proximity still acknowledges the cursor on top of the new base, with half the old
+    /// idle-to-proximity step so the breathe reads smaller than it used to.
+    /// NotchCore gap: belongs beside `Metrics.proximityHeight` once the base moves there.
+    static let proximityHeight: CGFloat =
+        Metrics.proximityHeight + (Metrics.proximityHeight - Metrics.idleHeight) / 2
+    static let proximityShoulderPadding: CGFloat =
+        Metrics.proximityShoulderPadding
+        + (Metrics.proximityShoulderPadding - Metrics.shoulderPadding) / 2
+
+    /// Extra gap between the hardware housing and the pill row, so the pills do not sit
+    /// flush under the cutout. One loose step from the pane spacing scale; everything
+    /// below the pills shifts down with it. NotchCore gap: belongs in `Metrics.pillRowTop`.
+    static let pillBreathingRoom: CGFloat = Metrics.spacingLoose
+
+    /// Where the border progress line stops short of the expanded panel's bottom corners,
+    /// mirroring how `Metrics.idleProgressInset` derives from the idle corner radius.
+    /// NotchCore gap: belongs beside `Metrics.idleProgressInset`.
+    static let expandedProgressInset: CGFloat = Metrics.expandedCornerRadius * 0.75
+
+    /// Lift of the bottom-edge progress line off the very edge, shared by the idle bar
+    /// and the expanded border so the line lands identically in both.
+    static let progressEdgeLift: CGFloat = 1
+
     /// Slack around the panel so the expanded shadow is not clipped by the window edge.
     static let windowMargin: CGFloat = 80
 

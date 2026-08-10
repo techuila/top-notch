@@ -15,7 +15,9 @@ struct IdleBarView: View {
     private var isSource: Bool { model.phase != .expanded }
 
     private var shoulderPadding: CGFloat {
-        model.phase == .proximity ? Metrics.proximityShoulderPadding : Metrics.shoulderPadding
+        model.phase == .proximity
+            ? ShellMetrics.proximityShoulderPadding
+            : ShellMetrics.idleShoulderPadding
     }
 
     var body: some View {
@@ -65,7 +67,7 @@ struct IdleBarView: View {
                 // Stops short of where the bottom corners curve away, so the line reads as
                 // part of the notch edge instead of a bar running off the end of it.
                 .padding(.horizontal, Metrics.idleProgressInset)
-                .padding(.bottom, 1)
+                .padding(.bottom, ShellMetrics.progressEdgeLift)
                 .matchedGeometryEffect(
                     id: NotchTravelID.progress.rawValue, in: namespace, isSource: isSource
                 )
@@ -109,17 +111,27 @@ struct RotorView: View {
 /// The three travelling elements, rendered by the shell while the notch is closed.
 ///
 /// Exactly one instance of each exists at any moment: while idle or in proximity these
-/// are the rendered views, matched to the idle anchors. The moment the panel opens the
-/// music pane's own artwork, waveform and scrubber take over, and these leave through
-/// the matched-geometry anchors in `ExpandedView`, which sit where the pane lays those
-/// elements out. Rendering both at once is what put a second artwork tile and a second
-/// progress line on screen.
+/// are the rendered views, matched to the idle anchors. The moment the panel opens on
+/// the music pane, the pane's own artwork, waveform and scrubber take over, and these
+/// leave through the matched-geometry anchors in `ExpandedView`, which sit where the
+/// pane lays those elements out. Rendering both at once is what put a second artwork
+/// tile and a second progress line on screen.
+///
+/// The progress line alone also lives through the expanded phase whenever the landed
+/// pane is not music: it follows `ExpandedView`'s border anchor along the panel's
+/// bottom edge, and travels to the scrubber only when the user lands on music. It is
+/// still the same single instance the whole way.
 struct TravelLayer: View {
     let model: NotchShellModel
     let namespace: Namespace.ID
 
+    private var showsBorderProgress: Bool {
+        model.phase != .expanded || model.landed != .music
+    }
+
     var body: some View {
         let artwork = model.travellingArtwork
+        let composition = model.composition
         ZStack(alignment: .topLeading) {
             if model.phase != .expanded {
                 if artwork.present {
@@ -134,19 +146,19 @@ struct TravelLayer: View {
                             id: NotchTravelID.waveform.rawValue, in: namespace, isSource: false
                         )
                 }
-                if let progress = model.composition.progress {
-                    NotchProgress(
-                        value: progress,
-                        height: Metrics.idleProgressHeight,
-                        tint: Style.accent(for: model.focusedID),
-                        // Music's accent is plain white. At full strength on a black notch
-                        // that is a glowing stub, not a progress line.
-                        prominence: 0.25
-                    )
-                    .matchedGeometryEffect(
-                        id: NotchTravelID.progress.rawValue, in: namespace, isSource: false
-                    )
-                }
+            }
+            if showsBorderProgress, let progress = composition.progress {
+                NotchProgress(
+                    value: progress,
+                    height: Metrics.idleProgressHeight,
+                    tint: Style.accent(for: composition.progressPane ?? model.focusedID),
+                    // Music's accent is plain white. At full strength on a black notch
+                    // that is a glowing stub, not a progress line.
+                    prominence: 0.25
+                )
+                .matchedGeometryEffect(
+                    id: NotchTravelID.progress.rawValue, in: namespace, isSource: false
+                )
             }
         }
         .allowsHitTesting(false)

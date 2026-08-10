@@ -22,8 +22,8 @@ struct NotchRootView: View {
 
     private var surfaceHeight: CGFloat {
         switch model.phase {
-        case .idle: Metrics.idleHeight
-        case .proximity: Metrics.proximityHeight
+        case .idle: ShellMetrics.idleHeight
+        case .proximity: ShellMetrics.proximityHeight
         case .expanded: model.panelHeight
         }
     }

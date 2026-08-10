@@ -13,11 +13,17 @@ struct ExpandedView: View {
         max(Metrics.paneTop - Metrics.pillRowTop - Metrics.pillRowHeight, 0)
     }
 
+    /// Where the pane band actually starts: the shared token plus the breathing room the
+    /// pill row gained above it, since everything below the pills shifts down together.
+    private var paneTop: CGFloat {
+        Metrics.paneTop + ShellMetrics.pillBreathingRoom
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             PillRow(model: model)
                 .frame(height: Metrics.pillRowHeight)
-                .padding(.top, Metrics.pillRowTop)
+                .padding(.top, Metrics.pillRowTop + ShellMetrics.pillBreathingRoom)
                 .padding(.bottom, pillToPaneGap)
             PaneHost(model: model)
             Spacer(minLength: 0)
@@ -48,7 +54,7 @@ struct ExpandedView: View {
             .padding(.leading, Metrics.paneInset)
             .padding(
                 .top,
-                Metrics.paneTop + max((musicContentHeight - ShellMetrics.expandedArtwork) / 2, 0)
+                paneTop + max((musicContentHeight - ShellMetrics.expandedArtwork) / 2, 0)
             )
             .allowsHitTesting(false)
     }
@@ -62,21 +68,38 @@ struct ExpandedView: View {
             .padding(.trailing, Metrics.paneInset)
             .padding(
                 .top,
-                Metrics.paneTop + max((musicContentHeight - ShellMetrics.expandedWaveHeight) / 2, 0)
+                paneTop + max((musicContentHeight - ShellMetrics.expandedWaveHeight) / 2, 0)
             )
             .allowsHitTesting(false)
     }
 
-    /// On open the bottom-edge line detaches from the border and becomes the scrubber.
-    private var progressAnchor: some View {
-        Color.clear
-            .frame(height: Metrics.idleProgressHeight)
-            .matchedGeometryEffect(
-                id: NotchTravelID.progress.rawValue, in: namespace, isSource: true
-            )
-            .padding(.horizontal, Metrics.paneInset)
-            .padding(.bottom, Metrics.paneBottom)
-            .allowsHitTesting(false)
+    /// Where the travelling progress line lands while the panel is open. On the music
+    /// pane it detaches from the border and becomes the scrubber; on every other pane it
+    /// stays a border line along the panel's bottom edge, exactly as it reads when idle.
+    /// One anchor, moved between the two positions, so the single travelling instance in
+    /// `TravelLayer` follows it rather than ever being duplicated.
+    @ViewBuilder private var progressAnchor: some View {
+        if model.landed == .music {
+            Color.clear
+                .frame(height: Metrics.idleProgressHeight)
+                .matchedGeometryEffect(
+                    id: NotchTravelID.progress.rawValue, in: namespace, isSource: true
+                )
+                .padding(.horizontal, Metrics.paneInset)
+                .padding(.bottom, Metrics.paneBottom)
+                .allowsHitTesting(false)
+        } else {
+            Color.clear
+                .frame(height: Metrics.idleProgressHeight)
+                .matchedGeometryEffect(
+                    id: NotchTravelID.progress.rawValue, in: namespace, isSource: true
+                )
+                // Stops short of where the bottom corners curve away, matching the idle
+                // presentation of the same line.
+                .padding(.horizontal, ShellMetrics.expandedProgressInset)
+                .padding(.bottom, ShellMetrics.progressEdgeLift)
+                .allowsHitTesting(false)
+        }
     }
 }
 

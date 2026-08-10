@@ -141,10 +141,15 @@ struct TravelLayer: View {
                         )
                 }
                 if let levels = model.travellingWaveform {
-                    WaveformView(levels: levels)
-                        .matchedGeometryEffect(
-                            id: NotchTravelID.waveform.rawValue, in: namespace, isSource: false
-                        )
+                    // Playing is inferred from the levels themselves: the generator rests
+                    // at 0.05, so anything meaningfully above that is live music.
+                    NotchWaveform(
+                        levels: levels,
+                        isPlaying: levels.contains { $0 > 0.06 }
+                    )
+                    .matchedGeometryEffect(
+                        id: NotchTravelID.waveform.rawValue, in: namespace, isSource: false
+                    )
                 }
             }
             if showsBorderProgress, let progress = composition.progress {

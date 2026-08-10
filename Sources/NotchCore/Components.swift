@@ -135,6 +135,49 @@ public struct NotchProgress: View {
     }
 }
 
+/// The music waveform. The idle shoulder and the music pane show the same element at two
+/// sizes, so this is one drawing, not two: fixed-width capsule bars scaled to whatever
+/// frame the caller gives it, dimmed and collapsed to a quiet row when nothing plays.
+public struct NotchWaveform: View {
+    private let levels: [Float]
+    private let isPlaying: Bool
+
+    public init(levels: [Float], isPlaying: Bool) {
+        self.levels = levels
+        self.isPlaying = isPlaying
+    }
+
+    /// The width the bars occupy naturally; callers that size the frame to the content
+    /// use this instead of re-deriving bar arithmetic.
+    public static func naturalWidth(barCount: Int) -> CGFloat {
+        CGFloat(max(barCount * 2 - 1, 1)) * Metrics.waveformBarWidth
+    }
+
+    public var body: some View {
+        GeometryReader { geo in
+            HStack(alignment: .center, spacing: Metrics.waveformBarWidth) {
+                ForEach(Array(levels.enumerated()), id: \.offset) { _, level in
+                    Capsule()
+                        .fill(Style.ink.opacity(isPlaying ? 0.85 : 0.35))
+                        .frame(
+                            width: Metrics.waveformBarWidth,
+                            // The floor is the bar's thickness, not its width. A capsule
+                            // clamped to its width is a circle, and a paused track must
+                            // read as a flat quiet row, not a row of dots.
+                            height: max(
+                                geo.size.height * CGFloat(min(max(level, 0), 1)),
+                                Metrics.waveformRestHeight
+                            )
+                        )
+                }
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+        .notchAnimation(Motion.ambient, value: levels)
+        .accessibilityHidden(true)
+    }
+}
+
 /// A progress ring. The pomodoro uses it large in its pane and small in the idle slot,
 /// which is the same view at two sizes rather than two drawings.
 public struct NotchRing: View {

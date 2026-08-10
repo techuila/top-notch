@@ -97,29 +97,20 @@ private struct ArtworkView: View {
 
 // MARK: Waveform
 
+/// The pane draws the shared waveform at its expanded size; the shell draws the same
+/// element in the idle shoulder, so the two states are one drawing.
 private struct WaveformView: View {
     let levels: [Float]
     let isPlaying: Bool
 
-    private static let barWidth: CGFloat = 3
     private static let maxHeight: CGFloat = 46
 
     var body: some View {
-        HStack(alignment: .center, spacing: Self.barWidth) {
-            ForEach(Array(levels.enumerated()), id: \.offset) { _, level in
-                Capsule()
-                    .fill(Style.ink.opacity(isPlaying ? 0.85 : 0.35))
-                    .frame(
-                        width: Self.barWidth,
-                        height: max(Self.barWidth, CGFloat(level) * Self.maxHeight)
-                    )
-            }
-        }
-        .frame(height: Self.maxHeight)
-        // Bars are already smoothed by the generator, so playing frames are drawn as they
-        // come. Only the collapse into a flat line on pause is animated.
-        .notchAnimation(Motion.ambient, value: isPlaying)
-        .accessibilityHidden(true)
+        NotchWaveform(levels: levels, isPlaying: isPlaying)
+            .frame(
+                width: NotchWaveform.naturalWidth(barCount: levels.count),
+                height: Self.maxHeight
+            )
     }
 }
 

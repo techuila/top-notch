@@ -24,6 +24,9 @@ public enum Metrics {
     public static let artworkIdleSize: CGFloat = 24
     public static let ringIdleSize: CGFloat = 15
 
+    /// Width of one waveform bar, identical wherever the waveform is drawn.
+    public static let waveformBarWidth: CGFloat = 3
+
     /// Height of a waveform bar at rest. A paused track should read as a flat, quiet row
     /// of dashes, so this is a thickness rather than anything derived from the bar width.
     public static let waveformRestHeight: CGFloat = 2

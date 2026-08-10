@@ -133,6 +133,10 @@ The waveform is synthesized, not audio-reactive: a deterministic beat clock with
 envelopes, asymmetric attack/decay, bass-weighted bars and slow section energy. It runs
 only while music plays and is stable under scrubbing.
 
+Idle and expanded are one drawing (added 2026-08-11): `NotchWaveform` in NotchCore renders
+both, so the idle shoulder and the music pane can never drift apart in look or motion. The
+shell and the pane had separate implementations before, and they did drift.
+
 Rejected on 2026-08-10: a real audio tap (needs the audio-capture permission prompt, a
 stable TCC identity and a hot audio thread, all for a 30pt visual; violates cheap-when-idle);
 a third-party library (none exists for visualizing another app's output; even boring.notch

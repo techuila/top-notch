@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TopNotch - music, files, notes and a pomodoro in your MacBook notch</title>
+  <meta name="description" content="TopNotch turns the MacBook notch into music controls, a temporary file shelf, quick notes and a pomodoro. Free and open source for macOS 26.">
+  <link rel="canonical" href="https://techuila.github.io/top-notch/">
+  <meta name="theme-color" content="#edebe4">
+
+  <meta property="og:title" content="TopNotch - music, files, notes and a pomodoro in your MacBook notch">
+  <meta property="og:description" content="TopNotch turns the MacBook notch into music controls, a temporary file shelf, quick notes and a pomodoro. Free and open source for macOS 26.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://techuila.github.io/top-notch/">
+  <meta property="og:image" content="https://techuila.github.io/top-notch/assets/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="TopNotch - music, files, notes and a pomodoro in your MacBook notch">
+  <meta name="twitter:description" content="TopNotch turns the MacBook notch into music controls, a temporary file shelf, quick notes and a pomodoro. Free and open source for macOS 26.">
+  <meta name="twitter:image" content="https://techuila.github.io/top-notch/assets/og.png">
+
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="styles.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "TopNotch",
+    "operatingSystem": "macOS 26",
+    "applicationCategory": "UtilitiesApplication",
+    "description": "Music controls, a temporary file shelf, quick notes and a pomodoro, living in the MacBook notch.",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "downloadUrl": "https://github.com/techuila/top-notch/releases/latest",
+    "license": "https://github.com/techuila/top-notch/blob/main/LICENSE",
+    "sameAs": "https://github.com/techuila/top-notch",
+    "url": "https://techuila.github.io/top-notch/",
+    "image": "https://techuila.github.io/top-notch/assets/icon.png"
+  }
+  </script>
+</head>
+<body>
+
+<header class="site-head">
+  <div class="wrap">
+    <a class="wordmark" href="#">Top<span class="dot">.</span>Notch</a>
+    <nav class="head-nav" aria-label="Site">
+      <a href="#features">Features</a>
+      <a href="#requirements">Requirements</a>
+      <a href="https://github.com/techuila/top-notch">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero" aria-labelledby="hero-title" style="border-top:0">
+    <div class="wrap">
+      <span class="label">TopNotch / macOS 26 / free</span>
+      <h1 id="hero-title">The notch, made useful.</h1>
+      <p class="lede">Music controls, a temporary file shelf, quick notes
+        and a pomodoro, living in the MacBook notch. Invisible when idle,
+        zero background cost by design.</p>
+      <div class="hero-actions">
+        <a class="key-btn" id="download-btn" href="https://github.com/techuila/top-notch/releases/latest">
+          <span class="tick" aria-hidden="true">&#9679;</span> Download for macOS
+        </a>
+        <span class="version-chip" id="version">Latest</span>
+        <a class="ghost-link" href="https://github.com/techuila/top-notch">View source</a>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="display-title">
+    <div class="wrap">
+      <div class="sect-head">
+        <h2 id="display-title">The idle notch</h2>
+        <span class="label">While music plays</span>
+      </div>
+
+      <div class="faceplate">
+        <div class="screen" role="img"
+             aria-label="The MacBook notch while music plays: album art on the left shoulder, a live waveform on the right, an orange progress line along the bottom edge.">
+          <div class="notch" aria-hidden="true">
+            <div class="art"></div>
+            <div class="housing"></div>
+            <div class="wave"><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="progress"></div>
+          </div>
+        </div>
+        <div class="legend" aria-hidden="true">
+          <span><b>A</b>Album art</span>
+          <span><b>B</b>Camera housing, untouched</span>
+          <span><b>C</b>Live waveform</span>
+          <span><b>D</b>Progress line</span>
+        </div>
+      </div>
+
+      <figure class="shot">
+        <img src="assets/01-idle-music.png" width="1400" height="120"
+             alt="Screenshot of the TopNotch idle notch playing music, with album art and a waveform flanking the camera housing">
+        <figcaption>As shipped. Idle notch, system-wide Now Playing.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section id="features" aria-labelledby="features-title">
+    <div class="wrap">
+      <div class="sect-head">
+        <h2 id="features-title">Four panes, one notch</h2>
+        <span class="label">Feature set</span>
+      </div>
+
+      <div class="grid">
+        <div class="cell">
+          <span class="label">Music</span>
+          <h3>Every player, same controls</h3>
+          <p>System-wide Now Playing. Apple Music, Spotify, a browser tab, a
+            podcast app: one transport with artwork, a scrubber, shuffle and
+            repeat.</p>
+        </div>
+        <div class="cell">
+          <span class="label">Drop</span>
+          <h3>A temporary file shelf</h3>
+          <p>Drag files at the notch and it opens to catch them. Drag them back
+            out one at a time or all at once. Items expire on their own.</p>
+        </div>
+        <div class="cell">
+          <span class="label">Notes</span>
+          <h3>Plain quick notes</h3>
+          <p>A plain scratchpad in the notch. Open it, type, close it. Notes
+            keep themselves saved.</p>
+        </div>
+        <div class="cell">
+          <span class="label">Focus</span>
+          <h3>A pomodoro that stays put</h3>
+          <p>A running timer keeps a progress ring and live countdown parked at
+            the far left of the notch, closed or open.</p>
+        </div>
+        <div class="cell">
+          <span class="label">Updates</span>
+          <h3>Autoupdates via Sparkle</h3>
+          <p>Signed updates, checked and installed in place. No account, no
+            launcher, no nagging.</p>
+        </div>
+        <div class="cell">
+          <span class="label">Source</span>
+          <h3>Open source</h3>
+          <p>MIT licensed. The source, release scripts and this page live
+            <a href="https://github.com/techuila/top-notch">on GitHub</a>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="requirements" aria-labelledby="req-title">
+    <div class="wrap">
+      <div class="sect-head">
+        <h2 id="req-title">Requirements</h2>
+        <span class="label">Spec</span>
+      </div>
+
+      <dl class="spec">
+        <div class="spec-row">
+          <dt class="label">System</dt>
+          <dd>macOS 26</dd>
+        </div>
+        <div class="spec-row">
+          <dt class="label">Hardware</dt>
+          <dd>A MacBook with a notch. Works on any Mac; without a notch it sits
+            at the top edge of the screen.</dd>
+        </div>
+        <div class="spec-row">
+          <dt class="label">Network</dt>
+          <dd>None. No analytics, no accounts, nothing leaves your Mac.</dd>
+        </div>
+        <div class="spec-row">
+          <dt class="label">Price</dt>
+          <dd>0 USD</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+</main>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <nav class="foot-links" aria-label="Footer">
+      <a href="https://github.com/techuila/top-notch">GitHub</a>
+      <a href="https://github.com/techuila/top-notch/blob/main/LICENSE">MIT License</a>
+      <a href="https://github.com/techuila/top-notch/blob/main/publishing/metadata/privacy-policy.md">Privacy</a>
+    </nav>
+    <span class="foot-note">TopNotch &#169; 2026 techuila</span>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var btn = document.getElementById("download-btn");
+    var ver = document.getElementById("version");
+    fetch("https://api.github.com/repos/techuila/top-notch/releases/latest")
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (rel) {
+        var dmg = (rel.assets || []).find(function (a) {
+          return /\.dmg$/i.test(a.name);
+        });
+        if (dmg) { btn.href = dmg.browser_download_url; }
+        if (rel.tag_name) { ver.textContent = rel.tag_name; }
+      })
+      .catch(function () { /* keep the releases page fallback */ });
+  })();
+</script>
+
+</body>
+</html>

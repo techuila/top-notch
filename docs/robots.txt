@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://techuila.github.io/top-notch/sitemap.xml

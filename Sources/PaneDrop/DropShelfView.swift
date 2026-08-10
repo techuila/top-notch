@@ -240,6 +240,10 @@ struct FileChip: View {
         .offset(y: hovering ? -DropLayout.chipLift : 0)
         .shadow(color: .black.opacity(hovering ? 0.4 : 0), radius: hovering ? 10 : 0, y: 3)
         .onHover { hovering = $0 }
+        // The full name, because long names truncate in the middle. On every chip rather
+        // than only truncated ones: whether a name fits is layout state SwiftUI does not
+        // expose, and a tooltip on a short name costs nothing.
+        .help(item.name)
         .notchAnimation(Motion.tap, value: hovering)
         .task(id: item.id) { thumbnail = await ThumbnailCache.shared.image(for: item) }
         .onDrag(provider) { dragPreview }

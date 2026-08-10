@@ -30,6 +30,33 @@ release page, a landing page and the Homebrew cask instead.
 | Remaining screenshots | `screenshots/SCREENSHOTS.md` shot list | Needs your hand |
 | App category + icon keys | `Resources/Info.plist` | Done |
 
+## How releases work now
+
+Releases are automated by `.github/workflows/release-please.yml`:
+
+1. Conventional commits land on `main`. release-please keeps a release PR open that
+   accumulates a changelog and bumps `CFBundleShortVersionString` in
+   `Resources/Info.plist` (via the `x-release-please-version` marker).
+2. Merging that PR tags the release and creates it on GitHub.
+3. The `dmg` job then builds on a macOS 26 runner, signs with Developer ID, notarizes,
+   staples, and attaches `TopNotch-<version>.dmg` plus a `.sha256` file to the release.
+
+The first release is pinned to `0.1.0` by `release-as` in `release-please-config.json`.
+**Delete that line after v0.1.0 ships**, or every release will be 0.1.0.
+
+`scripts/release.sh` still works standalone for a local release if CI is ever down.
+
+### Repository secrets the workflow needs
+
+| Secret | Value |
+|---|---|
+| `MACOS_CERT_P12` | Developer ID Application cert + key exported as .p12, base64-encoded (`base64 -i cert.p12 \| pbcopy`) |
+| `MACOS_CERT_PASSWORD` | Password chosen when exporting the .p12 |
+| `MACOS_SIGN_IDENTITY` | Full identity string, e.g. `Developer ID Application: Name (TEAMID)` |
+| `APPLE_ID` | Apple ID email for notarization |
+| `APPLE_TEAM_ID` | 10-character team ID |
+| `APPLE_APP_PASSWORD` | App-specific password from https://appleid.apple.com |
+
 ## What only you can do, in order
 
 1. **Create a Developer ID Application certificate.** Your keychain has an Apple
@@ -37,22 +64,13 @@ release page, a landing page and the Homebrew cask instead.
    https://developer.apple.com/account/resources/certificates/add, choose
    "Developer ID Application", follow the CSR steps, download and double-click the cert.
    (The App Store Connect API cannot create this certificate type; it is browser-only.)
-2. **Store notary credentials** (needs an app-specific password from
-   https://appleid.apple.com):
-   ```bash
-   xcrun notarytool store-credentials topnotch \
-     --apple-id YOUR_APPLE_ID --team-id YOUR_TEAM_ID --password APP_SPECIFIC_PASSWORD
-   ```
-3. **Run the release:**
-   ```bash
-   ./publishing/scripts/release.sh "Developer ID Application: Your Name (TEAMID)"
-   ```
-   Produces `build/release/TopNotch-0.1.0.dmg`, notarized and stapled.
+2. **Export it as a .p12 and set the six repository secrets** in the table above
+   (GitHub repo, Settings, Secrets and variables, Actions).
+3. **Merge the release PR** that release-please opens. CI does the rest and attaches
+   the DMG.
 4. **Take the remaining screenshots** per `screenshots/SCREENSHOTS.md`.
-5. **Publish the GitHub release:** tag `v0.1.0`, attach the DMG, paste the release notes
-   from `metadata/metadata.md`.
-6. Optional: **submit the Homebrew cask** from `metadata/metadata.md` (fill in the DMG's
-   `shasum -a 256` first).
+5. Optional: **submit the Homebrew cask** from `metadata/metadata.md` (fill in the
+   `shasum -a 256` that CI attached next to the DMG).
 
 ## Worth doing before 1.0, not blocking 0.1.0
 

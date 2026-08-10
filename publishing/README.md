@@ -45,7 +45,7 @@ release page, a landing page and the Homebrew cask instead.
    ```
 3. **Run the release:**
    ```bash
-   ./publishing/scripts/release.sh "Developer ID Application: Axl Oliver Cuyugan (TEAMID)"
+   ./publishing/scripts/release.sh "Developer ID Application: Your Name (TEAMID)"
    ```
    Produces `build/release/TopNotch-0.1.0.dmg`, notarized and stapled.
 4. **Take the remaining screenshots** per `screenshots/SCREENSHOTS.md`.

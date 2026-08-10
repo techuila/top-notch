@@ -12,7 +12,8 @@ Status key: **LOCKED** = decided, build it exactly this way. **OPEN** = still be
 ### Expanded panel layout - **LOCKED**
 Mode pills. A row of pills (Music, Drop, Notes, Focus) sits at the top of the expanded
 panel. Clicking one morphs the panel's height and content to whatever that feature needs.
-One feature visible at a time, each getting the full panel width.
+One feature visible at a time, each getting the full panel width. The pill row keeps clear
+breathing room below the hardware notch (added 2026-08-10; it used to sit nearly flush).
 
 Rejected: a left icon rail with a fixed-size content pane (too narrow); live tiles showing
 all four features at once (too dense, panel too wide).
@@ -25,8 +26,13 @@ never floating detached beside it.
 - Right shoulder: live audio-reactive waveform
 - Bottom edge: progress bar spanning the **full width** of the notch
 
-When audio stops, all three retract to zero width and the notch settles back to exactly its
-hardware dimensions, becoming invisible.
+When audio stops, all three retract to zero width and the notch settles back to its idle
+base, sitting just below the hardware cutout.
+
+Superseded on 2026-08-10: the idle base used to equal the hardware dimensions exactly, which
+hid the bottom-edge progress bar inside the physical cutout. The idle base is now the former
+proximity size (visible below the cutout at all times), and the proximity breathe is a
+smaller step on top of it.
 
 The physical camera housing is a real cutout with no pixels behind it. Nothing may ever be
 drawn in that region. Content only occupies the shoulders flanking it.
@@ -39,6 +45,11 @@ scrubber. Cross-fading a component out and a different one in is forbidden.
 
 There is a proximity state between idle and expanded: when the cursor comes within range the
 notch breathes slightly wider before any hover, acknowledging without committing.
+
+Amended on 2026-08-10: the bottom-edge progress bar becomes the scrubber only when the music
+pane is the landed pane. On every other pane the expanded panel keeps the line on its bottom
+border, exactly like the idle presentation, so playback stays visible everywhere. One
+instance always; it travels between border and scrubber as the user changes panes.
 
 ### Panel material - **LOCKED**
 Liquid Glass, the native macOS 26 material: translucent, blurred, saturated, with a specular
@@ -71,15 +82,15 @@ the slot collapses to zero width and the notch narrows.
 **Focus rule.** The notch stays on the pane the user last landed on, closed or open, and
 remembers it across launches. Opening the notch lands on that pane.
 
-Music is the only exception. When playback starts it takes focus, because a track starting is
-about the machine rather than about a pane somebody picked. It never does so under an open
-panel: the switch waits until the notch has been closed for three seconds, and reopening the
-panel restarts that wait. It fires once per track starting, so choosing another pane while
-music plays sticks, and a deliberate choice cancels a switch that is still waiting.
+There are no exceptions. Focus moves only when the user lands on a pane.
 
 Superseded on 2026-07-30: the original rule recomputed focus live from whichever live pane had
 the highest priority, so the notch moved off the user's choice on its own and moved back the
 moment music stopped. Priority now only breaks ties between simultaneous claims.
+
+Superseded on 2026-08-10: the music exception (playback start claimed focus after a 3s
+closed delay) is gone too. The pane the user picked is retained, always; music starting
+changes nothing. The claim machinery was deleted from the shell.
 
 Rejected: a dot cluster for pending items (needs a hover to decode, no live values); giving
 every feature its own permanent shoulder (notch width becomes unpredictable).
@@ -116,6 +127,22 @@ left untouched on disk.
 
 Rejected: locking the entire notes feature behind Touch ID (too much friction); fixing
 the entitlement to keep per-note privacy (not worth it for a scratchpad).
+
+### Music visualizer - **LOCKED**
+The waveform is synthesized, not audio-reactive: a deterministic beat clock with onset
+envelopes, asymmetric attack/decay, bass-weighted bars and slow section energy. It runs
+only while music plays and is stable under scrubbing.
+
+Rejected on 2026-08-10: a real audio tap (needs the audio-capture permission prompt, a
+stable TCC identity and a hot audio thread, all for a 30pt visual; violates cheap-when-idle);
+a third-party library (none exists for visualizing another app's output; even boring.notch
+ships randomized fake bars).
+
+### Shuffle and repeat - **LOCKED**
+Transport carries shuffle and repeat with real state. Buttons collapse to zero width when
+the playing source cannot report the mode (podcasts, browser tabs). Spotify has no
+repeat-one in AppleScript, so its cycle degrades to off/all cleanly. Commands are explicit
+set operations, never blind toggles.
 
 ### Menu bar item and settings - **LOCKED**
 There is one status item in the menu bar, and it is the only chrome outside the notch. It holds

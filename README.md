@@ -1,7 +1,7 @@
 # TopNotch
 
-A macOS notch app. Now Playing, a temporary file shelf, encrypted quick notes and a
-pomodoro, all living in the MacBook notch.
+A macOS notch app. Now Playing, a temporary file shelf, quick notes and a pomodoro,
+all living in the MacBook notch.
 
 TopNotch has no dock icon and no window. When nothing is happening it retracts to exactly
 the hardware dimensions of the notch and disappears. When music is playing it grows a
@@ -12,8 +12,12 @@ A single menu bar item holds the settings: open the notch, launch at login, quit
 launches at login by default, and that can be turned off from the menu or from System
 Settings under Login Items.
 
-> Status: early. It builds and runs, but it has not been released, signed for
-> distribution or tested on more than one machine.
+## Install
+
+Download the DMG from the [latest release](https://github.com/techuila/top-notch/releases/latest),
+drag TopNotch to Applications and open it. Builds are Developer ID signed and notarized,
+and the app updates itself through Sparkle: it checks the latest GitHub release and offers
+the new version when there is one.
 
 ## Requirements
 
@@ -26,7 +30,7 @@ Settings under Login Items.
 
 ```
 swift build            # compile
-swift test             # notes crypto and pomodoro engine
+swift test             # notes store and pomodoro engine
 ./Scripts/bundle.sh    # produce build/TopNotch.app, ad-hoc signed
 open build/TopNotch.app
 ```
@@ -45,7 +49,7 @@ refused by launchd with no useful error.
 |---|---|
 | **Music** | System-wide Now Playing with transport, artwork and a scrubber. Works with Apple Music, Spotify, a browser tab, podcasts, VLC. |
 | **Drop** | A temporary shelf. Drag files at the notch, it opens and catches them. Drag them back out one at a time or all at once. Items expire and are purged. |
-| **Notes** | Quick notes, encrypted at rest. Public by default with no prompt; any note can be marked private, which puts it behind Touch ID. |
+| **Notes** | Quick notes. Plain text, saved to disk as you type, no lock and no prompt. |
 | **Focus** | A pomodoro. A running timer holds a permanent slot in the idle notch with a progress ring and countdown. |
 
 ## Now Playing
@@ -79,22 +83,15 @@ distributed outside the App Store.
 It asks for:
 
 - **Apple Events**, to control Spotify and Apple Music when the system route is unavailable.
-- **Touch ID**, only when you open a note you marked private.
 
-Everything stays on your Mac. There is no network code, no analytics and no account.
+Everything stays on your Mac. The only network traffic is the Sparkle update check against
+this repo's GitHub releases; there are no analytics and no account.
 
 | Data | Where it lives |
 |---|---|
-| Notes | `~/Library/Application Support/<bundle id>/`, AES-GCM sealed |
-| Note keys | Login keychain: one everyday key, one key behind a `SecAccessControl` that the Secure Enclave will not release without a live Touch ID match |
+| Notes | `~/Library/Application Support/<bundle id>/`, plain JSON files |
 | Dropped files | `~/Library/Caches/<bundle id>/DropShelf`, expiring copies |
 | Pomodoro state, focused pane, launch-at-login flag | `UserDefaults` |
-
-Note bodies are sealed with AES-GCM and bound to authenticated context carrying the format
-version, the note id and the privacy flag, so a ciphertext cannot be moved between notes or
-relabelled from private to public. Public notes are still encrypted at rest, so a stolen
-disk or a Time Machine snapshot reveals nothing; they just open with no prompt while the
-login keychain is unlocked.
 
 ## Layout
 
@@ -104,7 +101,7 @@ login keychain is unlocked.
 | `NotchShell` | The window, idle bar, proximity, pill row, pane host |
 | `PaneMusic` | Now Playing, transport, artwork |
 | `PaneDrop` | The temporary file shelf |
-| `PaneNotes` | Quick notes and encryption |
+| `PaneNotes` | Quick notes |
 | `PaneFocus` | Pomodoro |
 | `TopNotch` | App entry and wiring |
 

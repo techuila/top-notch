@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/techuila/top-notch/compare/v0.3.0...v0.3.1) (2026-08-10)
+
+
+### Bug Fixes
+
+* draw idle and expanded waveform with one shared view ([015aac3](https://github.com/techuila/top-notch/commit/015aac33e686242f991e0d13089e7b1ce6a1c464))
+
 ## [0.3.0](https://github.com/techuila/top-notch/compare/v0.2.0...v0.3.0) (2026-08-10)
 
 

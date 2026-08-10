@@ -1,4 +1,5 @@
 import AppKit
+import NotchCore
 import Sparkle
 
 /// The status item, and the only chrome TopNotch has outside the notch itself.
@@ -19,6 +20,8 @@ final class MenuBarItem: NSObject, NSMenuDelegate {
     private let versionItem = NSMenuItem()
     private let openItem = NSMenuItem()
     private let launchItem = NSMenuItem()
+    private let appearanceItem = NSMenuItem()
+    private let appearanceMenu = NSMenu()
     private let updateItem = NSMenuItem()
     private let quitItem = NSMenuItem()
 
@@ -49,6 +52,17 @@ final class MenuBarItem: NSObject, NSMenuDelegate {
         updateItem.target = updater
         updateItem.action = #selector(SPUStandardUpdaterController.checkForUpdates(_:))
 
+        appearanceItem.title = "Appearance"
+        for mode in MaterialMode.allCases {
+            let item = NSMenuItem(
+                title: mode.title, action: #selector(pickAppearance(_:)), keyEquivalent: ""
+            )
+            item.target = self
+            item.representedObject = mode.rawValue
+            appearanceMenu.addItem(item)
+        }
+        appearanceItem.submenu = appearanceMenu
+
         launchItem.target = self
         launchItem.action = #selector(toggleLaunchAtLogin)
 
@@ -63,6 +77,7 @@ final class MenuBarItem: NSObject, NSMenuDelegate {
         menu.addItem(openItem)
         menu.addItem(.separator())
         menu.addItem(launchItem)
+        menu.addItem(appearanceItem)
         menu.addItem(updateItem)
         menu.addItem(.separator())
         menu.addItem(quitItem)
@@ -72,6 +87,11 @@ final class MenuBarItem: NSObject, NSMenuDelegate {
     // MARK: NSMenuDelegate
 
     func menuNeedsUpdate(_ menu: NSMenu) {
+        for item in appearanceMenu.items {
+            item.state =
+                (item.representedObject as? String) == Appearance.shared.material.rawValue
+                ? .on : .off
+        }
         if LoginItem.needsApproval {
             // Registered, but macOS is holding it until the user says yes. Saying "on"
             // here would be a lie, and an unchecked box would invite a click that does
@@ -96,6 +116,12 @@ final class MenuBarItem: NSObject, NSMenuDelegate {
         } else {
             LoginItem.toggle()
         }
+    }
+
+    @objc private func pickAppearance(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String,
+              let mode = MaterialMode(rawValue: raw) else { return }
+        Appearance.shared.material = mode
     }
 
     @objc private func quit() {

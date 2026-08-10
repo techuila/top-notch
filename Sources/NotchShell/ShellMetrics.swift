@@ -24,6 +24,14 @@ enum ShellMetrics {
         Metrics.proximityShoulderPadding
         + (Metrics.proximityShoulderPadding - Metrics.shoulderPadding) / 2
 
+    /// Radius of the concave fillet at each top corner of the silhouette, where the
+    /// surface flares outward to meet the screen edge instead of ending in a stamped
+    /// square corner. One snug step from the spacing scale. The drawn surface is wider
+    /// than the content frame by one fillet per side, and the hit box measures the
+    /// flared frame so hover and click zones match the drawn pixels. NotchCore gap:
+    /// belongs beside `Metrics.idleCornerRadius`.
+    static let flareRadius: CGFloat = Metrics.spacingSnug
+
     /// Extra gap between the hardware housing and the pill row, so the pills do not sit
     /// flush under the cutout. One loose step from the pane spacing scale; everything
     /// below the pills shifts down with it. NotchCore gap: belongs in `Metrics.pillRowTop`.

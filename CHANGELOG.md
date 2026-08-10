@@ -1,0 +1,45 @@
+# Changelog
+
+## 0.1.0 (2026-08-10)
+
+
+### Features
+
+* add app icon and utilities category ([a82744c](https://github.com/techuila/top-notch/commit/a82744c697f16c9636fd9ddf6b97559b4388dc06))
+* add menu bar item with launch at login on by default ([b26224e](https://github.com/techuila/top-notch/commit/b26224e1a0934a0b949a2e7b19471cc866b72890))
+* **core:** add selected button state, spacing scale and appkit tokens ([01f94f2](https://github.com/techuila/top-notch/commit/01f94f27d43365d1ec204f04ab1ab70883677ad6))
+* **core:** carry a countdown span and pulse token on idle signals ([042ed68](https://github.com/techuila/top-notch/commit/042ed684bc950af014c0b9d34729c73a35dbbecf))
+* **drop:** drag destination with file promises and multi file drag out ([d52e408](https://github.com/techuila/top-notch/commit/d52e408ebf5b52105cbc3d25e5409332ff73668b))
+* **drop:** file shelf pane ([28ab9f6](https://github.com/techuila/top-notch/commit/28ab9f68f9ae062266cab28159490cf6ce35a756))
+* **drop:** scratch storage with expiry and guarded purge ([6ef0d0b](https://github.com/techuila/top-notch/commit/6ef0d0bb2216cdf41c94ba0682648d38aa7e28fe))
+* **drop:** shelf model and off-main thumbnails ([1574296](https://github.com/techuila/top-notch/commit/1574296668ee1619c3eddd3bfef9089e252df287))
+* **focus:** pomodoro engine, pane and completion alerts ([09baf0b](https://github.com/techuila/top-notch/commit/09baf0ba8c7f2bd5851b22d7d7ac0fdc6ee8b2ff))
+* **music:** add AppleScript source for Spotify and Apple Music ([5e2ea00](https://github.com/techuila/top-notch/commit/5e2ea00c3bb8cd2da84b39541fa994389606c8af))
+* **music:** add system source over the mediaremote-adapter shim ([c1777c8](https://github.com/techuila/top-notch/commit/c1777c85a8b955dee0847cf71482b451b125832b))
+* **music:** build the music pane, waveform and idle signal ([cb35d25](https://github.com/techuila/top-notch/commit/cb35d2528f638561e773f3bed4ea070573e22e42))
+* **music:** define NowPlayingSource protocol and state model ([20b6ef6](https://github.com/techuila/top-notch/commit/20b6ef6943cf13bd05cfdbb96b434ecaa497dfb1))
+* **music:** pick source at runtime and launch players cold ([a892d1c](https://github.com/techuila/top-notch/commit/a892d1cf44bba957410d5ef0e94d633cbb206164))
+* **notes:** capture keystrokes inside the non-activating panel ([e4984d3](https://github.com/techuila/top-notch/commit/e4984d309c8abff04e21bb2d0c7dcf146715be12))
+* **notes:** encrypt notes at rest with two keychain keys ([db53731](https://github.com/techuila/top-notch/commit/db53731a6a823129548e068f3c728f0137c183be))
+* **notes:** note store with debounced autosave and relocking ([289ef3d](https://github.com/techuila/top-notch/commit/289ef3d33b8a52934799db68d6064a36a4674286))
+* **notes:** notes list, inline editor and idle badge ([b096f40](https://github.com/techuila/top-notch/commit/b096f40efff5b3ed5da131f92cbb12d2e285c437))
+* **shell:** add notch panel and idle composition model ([488cd5a](https://github.com/techuila/top-notch/commit/488cd5afe4bd0fa1dfdea2c66f3384ef3820db0e))
+* **shell:** add pill row and paging pane host ([d3e43cb](https://github.com/techuila/top-notch/commit/d3e43cbd1eb72d46ccc8a67103a0532379c01624))
+* **shell:** add shared travel namespace and shell metrics ([1584370](https://github.com/techuila/top-notch/commit/15843708847a7858795c07f5a8dd45274408ddcb))
+* **shell:** build idle bar, rotor and travelling elements ([ccc8394](https://github.com/techuila/top-notch/commit/ccc83942983db25377642ac9a98b27c7bb49f363))
+* **shell:** catch file drags at the notch and open the drop shelf ([d4cf9d5](https://github.com/techuila/top-notch/commit/d4cf9d54e4e9ec763117c6733d5ebceaf7345eef))
+* **shell:** stay on the chosen pane and let music claim focus on a delay ([453a43a](https://github.com/techuila/top-notch/commit/453a43a0dbd0816bfa07a13a2cd5b09e51b9fd60))
+* **shell:** wire window, cursor tracking and state machine ([79ae59f](https://github.com/techuila/top-notch/commit/79ae59fce83d29ccad1a1637f7dd278354e609fc))
+
+
+### Bug Fixes
+
+* drop malformed keychain group, fail loudly on entitlement errors ([3d77062](https://github.com/techuila/top-notch/commit/3d7706235e8afae7acd232f052b1c6f289c2d942))
+* **drop:** wrap chips into vertical rows so horizontal swipe stays the shell's ([bfa19dc](https://github.com/techuila/top-notch/commit/bfa19dccdedb3cb6881ed756dcb594362a2600cf))
+* **shell:** scroll to the landing pane when the panel opens ([725bb6d](https://github.com/techuila/top-notch/commit/725bb6d10005e7e3d9baaecd1b20ce0c15fb06c7))
+* tame idle progress line and stop paused waveform rendering as dots ([89029f1](https://github.com/techuila/top-notch/commit/89029f18489e63b1ace8e80287f3b1a601d5ddfa))
+
+
+### Performance Improvements
+
+* **drop:** bound the thumbnail cache by bytes as well as entries ([b681993](https://github.com/techuila/top-notch/commit/b6819935eccd0e5560fd95b95bed49b518b72c03))

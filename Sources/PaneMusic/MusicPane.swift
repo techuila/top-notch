@@ -46,9 +46,6 @@ public final class MusicPane: NotchPane {
         return IdleSignal(
             isLive: true,
             priority: 100,
-            // Music is the one pane allowed to take the notch off whatever the user last
-            // chose. A track starting is about the machine, not about a pane.
-            claimsFocus: true,
             // The outer-left slot belongs to a running pomodoro and nothing else.
             pinnedLeading: nil,
             identity: .artwork(state.track?.artwork),

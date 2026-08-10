@@ -104,6 +104,14 @@ a { color: inherit; }
   max-width: 14ch;
 }
 
+/* The marker pass on the key noun. White on TE orange, comma stays outside in ink. */
+.hl {
+  background: var(--orange);
+  color: #fff;
+  padding: 0 0.09em;
+  border-radius: 3px;
+}
+
 .hero .lede {
   margin-top: 24px;
   max-width: 52ch;
@@ -194,7 +202,9 @@ section { border-top: 1px solid var(--hairline); padding: 56px 0 72px; }
   font-weight: 700;
 }
 
-/* ---- notch display ---- */
+/* ---- the live notch replica ----
+   Truth is the app: geometry from ShellMetrics/Metrics, dark palette from Style.swift,
+   silhouette from NotchSilhouette.swift, spring from Motion.morph. */
 
 .faceplate {
   border: 1px solid var(--hairline);
@@ -204,7 +214,7 @@ section { border-top: 1px solid var(--hairline); padding: 56px 0 72px; }
 
 .screen {
   position: relative;
-  height: 150px;
+  height: 340px;
   background: var(--key);
   overflow: hidden;
 }
@@ -218,98 +228,691 @@ section { border-top: 1px solid var(--hairline); padding: 56px 0 72px; }
   background: var(--ink);
 }
 
-.notch {
+.tn {
+  /* Style.ink as RGB channels, Style.focusAccent, and the shell's fillet radius */
+  --tn-ink: 240, 237, 230;
+  --tn-orange: #ff4d00;
+  --tn-housing: 148px;
+  --tn-flare: 8px;
+  --tn-radius: 17px;         /* Metrics.idleCornerRadius */
+  --tn-prog-inset: 13px;     /* idleCornerRadius * 0.75 */
+  --tn-shoulder-pad: 11px;
+  --tn-spring: cubic-bezier(0.22, 1.08, 0.36, 1);
+
   position: absolute;
   top: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 340px;
-  max-width: 88%;
-  height: 38px;
+  width: 245px;
+  height: 44px;
   background: #000;
-  border-radius: 0 0 12px 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 10px;
+  border-radius: 0 0 var(--tn-radius) var(--tn-radius);
+  transition:
+    width 0.46s var(--tn-spring),
+    height 0.46s var(--tn-spring),
+    border-radius 0.46s var(--tn-spring),
+    background-color 0.46s ease,
+    box-shadow 0.46s ease;
+  outline-offset: 8px;
 }
 
-/* left shoulder: album art */
-.art {
-  width: 22px;
-  height: 22px;
-  background: #2b2a27;
-  position: relative;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.art::after {
+/* Inverted top corners: the concave quarter-fillets from NotchSilhouette.swift. The
+   circle centre sits outside the surface at the screen edge, so the outline leaves the
+   top edge flat and curves down into the vertical side. Always pure black, like the
+   silhouette the shell draws behind the panel material. */
+.tn::before,
+.tn::after {
   content: "";
   position: absolute;
-  right: 3px;
-  bottom: 3px;
-  width: 9px;
-  height: 9px;
-  background: var(--orange);
+  top: 0;
+  width: var(--tn-flare);
+  height: var(--tn-flare);
+  pointer-events: none;
 }
 
-/* centre: the camera housing, a physical hole with no pixels */
-.housing { width: 80px; height: 100%; flex: none; }
+.tn::before {
+  left: calc(-1 * var(--tn-flare));
+  background: radial-gradient(
+    circle at 0% 100%,
+    transparent calc(var(--tn-flare) - 0.5px),
+    #000 var(--tn-flare)
+  );
+}
 
-/* right shoulder: live waveform */
-.wave {
+.tn::after {
+  right: calc(-1 * var(--tn-flare));
+  background: radial-gradient(
+    circle at 100% 100%,
+    transparent calc(var(--tn-flare) - 0.5px),
+    #000 var(--tn-flare)
+  );
+}
+
+.tn[data-state="proximity"] { --tn-shoulder-pad: 14px; }
+
+/* Liquid-Glass look on expand: blur what is behind, keep the black base under it,
+   specular top edge, deep drop shadow. */
+.tn[data-state="expanded"] {
+  --tn-radius: 32px;         /* Metrics.expandedCornerRadius */
+  --tn-prog-inset: 24px;
+  background: rgba(10, 10, 9, 0.82);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  backdrop-filter: blur(18px) saturate(1.5);
+  box-shadow:
+    inset 0 1px 0 rgba(var(--tn-ink), 0.22),
+    inset 0 0 0 0.8px rgba(var(--tn-ink), 0.05),
+    0 14px 26px rgba(0, 0, 0, 0.45);
+}
+
+.tn:focus-visible { outline: 2px solid var(--orange); }
+
+/* ---- idle bar: shoulders flanking the housing ---- */
+
+.tn-bar {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 1fr var(--tn-housing) 1fr;
+  align-items: center;
+  transition: opacity 0.2s ease;
+}
+
+.tn[data-state="expanded"] .tn-bar { opacity: 0; pointer-events: none; }
+
+.tn-left,
+.tn-right {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  min-width: 0;
+}
+
+.tn-left {
+  justify-content: flex-end;
+  gap: 8px;
+  padding-right: var(--tn-shoulder-pad);
+}
+
+.tn-right {
+  justify-content: flex-start;
+  padding-left: var(--tn-shoulder-pad);
+}
+
+/* the camera housing column stays empty: a physical hole with no pixels */
+.tn-housing { height: 100%; }
+
+.tn-art {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(var(--tn-ink), 0.07);
+  flex: none;
+}
+
+.tn-art img,
+.mp-art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* hqdefault is 4:3 with letterbox bars; zoom crops them off */
+  transform: scale(1.35);
+}
+
+.tn-chip {
+  display: none;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+}
+
+.tn[data-chip="1"] .tn-chip { display: inline-flex; }
+
+.tn-chip svg { width: 15px; height: 15px; display: block; }
+
+.tn-chip-time {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: rgba(var(--tn-ink), 0.85);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- waveform: capsule bars, dim and flat when paused, dancing while playing ---- */
+
+.tn-wave {
   display: flex;
   align-items: center;
   gap: 3px;
   height: 22px;
+  flex: none;
 }
 
-.wave i {
-  display: block;
+.tn-wave i {
   width: 3px;
   height: 100%;
-  background: #edebe4;
-  border-radius: 1px;
+  border-radius: 2px;
+  background: rgba(var(--tn-ink), 0.35);
+  transform: scaleY(0.09);
   transform-origin: center;
-  animation: wave 1.15s ease-in-out infinite;
 }
 
-.wave i:nth-child(1) { animation-delay: 0s;    transform: scaleY(0.45); }
-.wave i:nth-child(2) { animation-delay: 0.18s; transform: scaleY(0.7); }
-.wave i:nth-child(3) { animation-delay: 0.36s; transform: scaleY(0.35); }
-.wave i:nth-child(4) { animation-delay: 0.09s; transform: scaleY(0.8); }
-.wave i:nth-child(5) { animation-delay: 0.27s; transform: scaleY(0.5); }
+.mp-wave { height: 46px; }
+.mp-wave i { transform: scaleY(0.045); }
 
-@keyframes wave {
-  0%, 100% { transform: scaleY(0.3); }
-  50%      { transform: scaleY(0.9); }
+.tn[data-playing="1"] .tn-wave i {
+  background: rgba(var(--tn-ink), 0.85);
+  animation: tn-wave 1.05s ease-in-out infinite;
 }
 
-/* bottom edge: progress line spanning the full notch width */
-.progress {
+.tn-wave i:nth-child(1) { animation-delay: 0s; }
+.tn-wave i:nth-child(2) { animation-delay: 0.14s; }
+.tn-wave i:nth-child(3) { animation-delay: 0.31s; }
+.tn-wave i:nth-child(4) { animation-delay: 0.07s; }
+.tn-wave i:nth-child(5) { animation-delay: 0.22s; }
+
+@keyframes tn-wave {
+  0%, 100% { transform: scaleY(0.22); }
+  50%      { transform: scaleY(0.92); }
+}
+
+/* ---- bottom edge progress line ---- */
+
+.tn-progressline {
   position: absolute;
-  left: 0;
-  bottom: 0;
-  height: 2px;
-  width: 100%;
-  background: #3a3833;
-  border-radius: 0 0 12px 12px;
+  left: var(--tn-prog-inset);
+  right: var(--tn-prog-inset);
+  bottom: 1px;
+  height: 2.5px;
+  border-radius: 2px;
+  background: rgba(var(--tn-ink), 0.14);
   overflow: hidden;
+  transition:
+    left 0.46s var(--tn-spring),
+    right 0.46s var(--tn-spring),
+    opacity 0.2s ease;
 }
 
-.progress::before {
-  content: "";
+.tn-progressline i {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: var(--tn-orange);
+  border-radius: 2px;
+}
+
+/* On the open music pane the line hands over to the scrubber, like the app */
+.tn[data-state="expanded"][data-pane="music"] .tn-progressline { opacity: 0; }
+
+/* ---- expanded panel ---- */
+
+.tn-panel {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.24s ease 0.1s;
+}
+
+.tn[data-state="expanded"] .tn-panel {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* The pill row floats over the pane band. The panes themselves span the full panel and
+   carry the top offset as padding, so no box edge crosses the translucent surface
+   mid-panel; a box edge there rasterises as a 1px seam through the glass in Chromium. */
+.tn-pills {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding-top: 58px; /* pillRowTop 40 + breathing room 18 below the housing */
+}
+
+.tn-pill {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  height: 24px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(var(--tn-ink), 0.07);
+  color: rgba(var(--tn-ink), 0.45);
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.tn-pill:hover { background: rgba(var(--tn-ink), 0.13); }
+
+.tn-pill[aria-selected="true"] {
+  background: rgba(var(--tn-ink), 0.92);
+  color: #141312;
+}
+
+.tn-panes {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.tn-track {
+  display: flex;
+  height: 100%;
+  transition: transform 0.46s var(--tn-spring);
+}
+
+.tn-pane {
+  flex: none;
+  width: 100%;
+  height: 100%;
+  /* top = paneTop 76 + pill breathing room 18; sides = Metrics.paneInset; bottom = paneBottom */
+  padding: 94px 34px 18px;
+}
+
+/* ---- shared buttons: NotchButton at its three sizes ---- */
+
+.tn-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border: 0;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(var(--tn-ink), 0.86);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.tn-btn svg { display: block; fill: currentColor; }
+
+.tn-btn:hover {
+  background: rgba(var(--tn-ink), 0.07);
+  color: rgb(var(--tn-ink));
+}
+
+.tn-btn:active { transform: scale(0.86); }
+
+.tn-btn[aria-pressed="true"] {
+  background: rgba(var(--tn-ink), 0.92);
+  color: #141312;
+}
+
+.tn-btn.size-16 { width: 30px; height: 30px; }
+.tn-btn.size-12 { width: 26px; height: 26px; }
+.tn-btn.size-10 { width: 24px; height: 24px; }
+
+/* repeat-one badge */
+.tn-btn .r1 {
+  display: none;
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  font-family: var(--mono);
+  font-size: 6px;
+  font-weight: 700;
+}
+
+.tn-btn[data-mode="one"] .r1 { display: block; }
+
+/* ---- music pane ---- */
+
+.mp {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 100%;
+}
+
+.mp-art {
+  width: 74px;
+  height: 74px;
+  border-radius: 13px; /* Style.artworkRadius */
+  overflow: hidden;
+  background: rgba(var(--tn-ink), 0.07);
+  flex: none;
+}
+
+.mp-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.mp-title {
+  color: rgb(var(--tn-ink));
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mp-artist {
+  color: rgba(var(--tn-ink), 0.58);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mp-transport { margin-top: 8px; }
+
+.mp-scrub {
+  height: 18px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.mp-scrub-track {
+  position: relative;
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(var(--tn-ink), 0.2);
+  overflow: hidden;
+  transition: height 0.15s ease;
+}
+
+.mp-scrub:hover .mp-scrub-track,
+.mp-scrub.dragging .mp-scrub-track { height: 5px; }
+
+.mp-scrub-track i {
   position: absolute;
   inset: 0 auto 0 0;
-  width: 38%;
-  background: var(--orange);
+  width: 0%;
+  background: rgba(var(--tn-ink), 0.95);
+  border-radius: 2px;
+}
+
+.mp-row {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.mp-time {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(var(--tn-ink), 0.58);
+  font-variant-numeric: tabular-nums;
+}
+
+.mp-buttons {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* ---- drop pane ---- */
+
+.dp {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dp-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.dp-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(var(--tn-ink), 0.45);
+}
+
+.dp-count {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: rgba(var(--tn-ink), 0.58);
+  font-variant-numeric: tabular-nums;
+}
+
+.dp-target {
+  flex: 1;
+  border: 1.2px dashed rgba(var(--tn-ink), 0.26);
+  border-radius: 10px;
+  padding: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  align-content: flex-start;
+  min-height: 0;
+}
+
+.dp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 10px; /* Style.tileRadius */
+  background: rgba(var(--tn-ink), 0.07);
+  color: rgba(var(--tn-ink), 0.86);
+  font-size: 12px;
+  max-width: 46%;
+  cursor: grab;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.dp-chip:hover,
+.dp-chip:focus-visible {
+  transform: translateY(-3px); /* DropLayout.chipLift */
+  background: rgba(var(--tn-ink), 0.13);
+}
+
+.dp-ico {
+  width: 22px;
+  height: 22px;
+  border-radius: 3px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--tn-ink), 0.1);
+  color: rgba(var(--tn-ink), 0.6);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.dp-chip .name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ---- notes pane ---- */
+
+.np {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.np-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: rgba(var(--tn-ink), 0.07);
+  color: rgb(var(--tn-ink));
+  font-size: 12.5px;
+  transition: background 0.15s ease;
+}
+
+.np-row:hover { background: rgba(var(--tn-ink), 0.13); }
+
+.np-row time {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: rgba(var(--tn-ink), 0.45);
+  font-variant-numeric: tabular-nums;
+}
+
+.np-scratch {
+  flex: 1;
+  min-height: 0;
+  resize: none;
+  border: 0;
+  outline: 0;
+  margin-top: 2px;
+  border-radius: 10px;
+  background: rgba(var(--tn-ink), 0.07);
+  color: rgb(var(--tn-ink));
+  font: 400 12.5px/1.5 var(--sans);
+  padding: 9px 12px;
+}
+
+.np-scratch::placeholder { color: rgba(var(--tn-ink), 0.45); }
+
+.np-scratch:focus { background: rgba(var(--tn-ink), 0.1); }
+
+/* ---- focus pane ---- */
+
+.fp {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.fp-dial {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  flex: none;
+}
+
+.fp-dial svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.fp-clock {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgb(var(--tn-ink));
+  font-size: 19px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.fp-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.fp-titlerow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fp-phase {
+  color: rgb(var(--tn-ink));
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.fp-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.fp-dots i {
+  width: 5px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(var(--tn-ink), 0.25);
+}
+
+.fp-dots i.now {
+  width: 14px;
+  background: var(--tn-orange);
+}
+
+.fp-session {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(var(--tn-ink), 0.45);
+}
+
+.fp-controls {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+/* ---- the caption under the replica ---- */
+
+.replica-note {
+  margin-top: 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.when-touch { display: none; }
+
+@media (hover: none) {
+  .when-hover { display: none; }
+  .when-touch { display: inline; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .wave i { animation: none; }
   .key-btn { transition: none; }
+  .tn,
+  .tn *,
+  .tn::before,
+  .tn::after {
+    transition-duration: 0.001s !important;
+    animation: none !important;
+  }
 }
 
 /* legend under the faceplate */
@@ -331,26 +934,6 @@ section { border-top: 1px solid var(--hairline); padding: 56px 0 72px; }
 }
 
 .legend b { color: var(--orange); font-weight: 600; margin-right: 8px; }
-
-/* the real screenshot */
-.shot { margin-top: 16px; }
-
-.shot img {
-  display: block;
-  width: 100%;
-  height: auto;
-  border: 1px solid var(--hairline);
-  background: #000;
-}
-
-.shot figcaption {
-  margin-top: 10px;
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--grey);
-}
 
 /* ---- feature grid ---- */
 
@@ -454,7 +1037,14 @@ section { border-top: 1px solid var(--hairline); padding: 56px 0 72px; }
   .cell .label { margin-bottom: 0; }
   .cell h3 { margin-top: 12px; }
   .spec-row { grid-template-columns: 1fr; gap: 4px; }
-  .screen { height: 120px; }
+  .screen { height: 400px; }
+  .tn-pane { padding: 94px 18px 16px; }
+  .mp { gap: 10px; }
+  .mp-art { width: 54px; height: 54px; border-radius: 10px; }
+  .mp-wave { display: none; }
+  .fp { gap: 14px; }
+  .fp-dial { width: 80px; height: 80px; }
+  .dp-chip { max-width: 100%; }
   .head-nav { gap: 14px; }
   .head-nav a { font-size: 10px; letter-spacing: 0.1em; }
 }

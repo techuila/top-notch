@@ -24,6 +24,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
   <link rel="stylesheet" href="styles.css">
   <script src="replica.js" defer></script>
+  <script src="counter.js" defer></script>
 
   <script type="application/ld+json">
   {
@@ -294,10 +295,16 @@
           <span><b>C</b>Live waveform</span>
           <span><b>D</b>Progress line</span>
         </div>
+        <div class="rr-stat" id="rr-stat" hidden>
+          <span class="rr-digits" id="rr-digits" aria-hidden="true"></span>
+          <span class="rr-caption label">Visitors rick rolled</span>
+          <span class="rr-live label" aria-hidden="true"><i></i>Live</span>
+        </div>
       </div>
 
       <p class="replica-note">This is the real thing.
         <span class="when-hover">Hover it.</span><span class="when-touch">Tap it.</span>
+        Press play and you join the count.
       </p>
     </div>
   </section>

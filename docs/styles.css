@@ -935,6 +935,62 @@ section { border-top: 1px solid var(--hairline); padding: 56px 0 72px; }
 
 .legend b { color: var(--orange); font-weight: 600; margin-right: 8px; }
 
+/* ---- rick roll counter: split digit cells, orange on black, odometer roll ---- */
+
+.rr-stat {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  border-top: 1px solid var(--hairline);
+  padding: 14px 18px;
+}
+
+.rr-digits {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.rr-cell {
+  display: block;
+  width: 22px;
+  height: 30px;
+  background: var(--ink);
+  overflow: hidden;
+}
+
+.rr-col {
+  display: block;
+  transition: transform 0.9s var(--tn-spring, cubic-bezier(0.22, 1.08, 0.36, 1));
+  will-change: transform;
+}
+
+.rr-col span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 30px;
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--orange);
+  font-variant-numeric: tabular-nums;
+}
+
+.rr-live { display: inline-flex; align-items: center; gap: 6px; color: var(--grey); }
+
+.rr-live i {
+  width: 6px;
+  height: 6px;
+  background: var(--orange);
+  border-radius: 50%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rr-col { transition: none; }
+}
+
 /* ---- feature grid ---- */
 
 .grid {

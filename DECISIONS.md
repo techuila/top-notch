@@ -38,10 +38,17 @@ The physical camera housing is a real cutout with no pixels behind it. Nothing m
 drawn in that region. Content only occupies the shoulders flanking it.
 
 ### Expand animation - **LOCKED**
-Components **move**, they never hide and reappear. Album art, waveform and progress bar are
-persistent elements that translate and scale from their idle coordinates to their expanded
-coordinates. On expand the bottom-edge progress bar detaches from the border and becomes the
-scrubber. Cross-fading a component out and a different one in is forbidden.
+The open and close read as a pure expand and shrink of one surface. No component flies
+laterally across it: idle elements fade in place as the surface grows, pane content fades
+in with the panel, and the reverse on close. The bottom-edge progress line stays on the
+surface edge in every state (border at idle and on non-music panes, scrubber on the music
+pane).
+
+Superseded on 2026-08-11: the original rule ("components move, they never swap") had album
+art and waveform translate between their idle and expanded coordinates. In practice the
+flight read as a ghost element streaking sideways on every close, and the owner rejected
+it. Positional travel is gone; the move-don't-swap spirit survives as the single
+continuously-morphing surface.
 
 There is a proximity state between idle and expanded: when the cursor comes within range the
 notch breathes slightly wider before any hover, acknowledging without committing.
@@ -69,6 +76,14 @@ entirely on close, not hiding it.
 
 Rejected: NSGlassEffectView (macOS 26 has it, but it composites within its own window -
 the exact failure - and cannot take the silhouette mask).
+
+Superseded on 2026-08-12: the behind-window backing is gone. The notch is exactly one
+component, `notchMaterial`, transitioning black to glass/gradient/solid with the morph.
+The owner chose one component over real behind-window transparency, knowing in-window
+glass cannot show other apps through the panel: glass mode is the system glass optics
+over the panel's own dark ground. An intermediate same-day design (persistent backing,
+effect view attached only while open under the opaque scrim) was built and rejected as
+still being a second component.
 
 ### Palette - **LOCKED**
 Teenage Engineering OP-1 / EP-133 KO II: warm off-white ink, one loud orange (the only
@@ -137,6 +152,16 @@ Horizontal scroll and trackpad swipe move between panes. **No scrollbar is ever 
 to the nearest pane on release. Pills at the top act as an indicator and a jump target. The
 panel morphs its height to whatever pane lands. A vertical mouse wheel also scrolls sideways so
 a plain mouse works.
+
+Amended on 2026-08-12: the host shows the landed pane only. The pane strip is offset-driven,
+not a scroll viewport; a swipe commits one step per gesture through the shell. The scroll-view
+host was rejected because its viewport could be born mispositioned and kept showing the
+leftmost pane (music) under another pane's selected pill. The notch never drifts to music, or
+any pane, on its own.
+
+Amended same day, exits: a departing side's content unmounts on the frame the phase flips.
+Any exit fade, however fast, rides the narrowing surface's edges and reads as a ghost sliding
+sideways; the owner rejected it twice. Instant exits, fade-ins only.
 
 ---
 

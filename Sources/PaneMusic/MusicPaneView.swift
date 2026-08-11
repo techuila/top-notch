@@ -29,11 +29,12 @@ struct MusicPaneView: View {
                     .truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                Spacer(minLength: 0)
-
                 if state.isLive {
+                    // Greedy: fills everything under the subtitle and distributes it
+                    // evenly around the scrubber with its internal spacers.
                     TransportBlock(pane: pane)
                 } else {
+                    Spacer(minLength: 0)
                     EmptyStateActions(pane: pane)
                 }
             }
@@ -75,10 +76,11 @@ struct MusicPaneView: View {
 
 // MARK: Artwork
 
+/// The album art: a square spanning the full content band, top of the title to the
+/// bottom of the transport. Sized by aspect ratio against the proposed band height
+/// rather than a constant, so it tracks `contentHeight` without a second number.
 private struct ArtworkView: View {
     let artwork: NotchImage?
-
-    private static let side: CGFloat = 74
 
     var body: some View {
         RoundedRectangle(cornerRadius: Style.artworkRadius, style: .continuous)
@@ -96,7 +98,8 @@ private struct ArtworkView: View {
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: Style.artworkRadius, style: .continuous))
-            .frame(width: Self.side, height: Self.side)
+            .aspectRatio(1, contentMode: .fit)
+            .frame(maxHeight: .infinity)
             .notchAnimation(Motion.content, value: artwork?.id)
     }
 }
@@ -135,7 +138,11 @@ private struct TransportBlock: View {
     }
 
     var body: some View {
-        VStack(spacing: 2) {
+        // Twin spacers centre the scrubber between the text block above and the
+        // buttons below: the two gaps are equal by construction.
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+
             Scrubber(
                 fraction: shownFraction,
                 onScrub: { scrubFraction = $0 },
@@ -144,6 +151,8 @@ private struct TransportBlock: View {
                     scrubFraction = nil
                 }
             )
+
+            Spacer(minLength: 0)
 
             ZStack {
                 HStack(spacing: 0) {

@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.2](https://github.com/techuila/top-notch/compare/v0.4.1...v0.4.2) (2026-08-11)
+
+
+### Bug Fixes
+
+* **core:** ring stroke inset and in-window glass optics ([d2a1a6d](https://github.com/techuila/top-notch/commit/d2a1a6d0b245de806fdd3a4db8a18a0e4ad23996))
+* **music:** artwork fills the content band, scrubber centred ([9fb2c59](https://github.com/techuila/top-notch/commit/9fb2c5975c78f3ece02e7277fe17c4f61deaa669))
+* **shell:** one surface component, in-place idle items, offset pane strip ([f27cc7a](https://github.com/techuila/top-notch/commit/f27cc7a459966c66ca9802966cb9007670452255))
+
 ## [0.4.1](https://github.com/techuila/top-notch/compare/v0.4.0...v0.4.1) (2026-08-11)
 
 

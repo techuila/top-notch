@@ -10,12 +10,15 @@ public enum NotchPhase: Equatable, Sendable {
     public var isExpanded: Bool { self == .expanded }
 }
 
-/// Identifier for the one element that persists across the idle bar and the expanded
-/// panel: the bottom-edge progress line. Artwork and waveform used to travel too; the
-/// open and close morphs are now a pure expand and shrink (owner decision), so each
-/// state draws those in place and only the border line is matched between layouts.
+/// Identifiers for the matched elements that persist across the idle bar and the
+/// expanded panel: the album art and the waveform, each one instance morphing between
+/// its idle slot and its place in the music pane (owner decision, 2026-08-12:
+/// components that exist in both states travel to their place, they never hide and
+/// show). The bottom-edge progress line persists too, but is laid out directly by the
+/// travel layer against the live surface instead of being matched.
 public enum NotchTravelID: String, Hashable, Sendable, CaseIterable {
-    case progress
+    case artwork
+    case waveform
 }
 
 private struct NotchNamespaceKey: EnvironmentKey {

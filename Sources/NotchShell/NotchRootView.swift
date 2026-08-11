@@ -40,24 +40,32 @@ struct NotchRootView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            // Pure expand and shrink (owner decision): the surface resizes and each
-            // side's content fades in with its state. Exits are INSTANT: a departing
-            // view rides the surface's leading edge, which travels inward as the
-            // centred surface narrows, so any exit fade - however fast - reads as a
-            // second ghost surface sliding sideways while it dims. The identity
-            // removal unmounts the departing side on the exact frame the phase flips,
-            // before the edges start moving.
+            // The idle bar never unmounts; it fades with the phase. Structural
+            // transitions proved untrustworthy here twice over: a removal-transition
+            // view freezes and stops updating, so its matched-geometry anchors kept
+            // claiming source mid-morph, and an `.identity` removal could linger
+            // whole seconds after the phase flipped, drawing idle items on top of
+            // the open panel. Plain animated opacity on a permanently mounted bar
+            // has neither failure, its anchors stay live for the travelling
+            // elements, and a handful of tiny idle views cost nothing while open.
+            IdleBarView(
+                model: model,
+                composition: model.composition,
+                namespace: travel,
+                onWidth: { idleWidth = $0 }
+            )
+            .opacity(isExpanded ? 0 : 1)
+            .allowsHitTesting(!isExpanded)
+
+            // The pane content is the expensive side, so it still unmounts at idle
+            // (cheap-when-idle). In with the morph; out fast, faster than the
+            // shrink, so nothing rides the narrowing surface's edges.
             if isExpanded {
                 ExpandedView(model: model)
-                    .transition(.asymmetric(insertion: .opacity, removal: .identity))
-            } else {
-                IdleBarView(
-                    model: model,
-                    composition: model.composition,
-                    namespace: travel,
-                    onWidth: { idleWidth = $0 }
-                )
-                .transition(.asymmetric(insertion: .opacity, removal: .identity))
+                    .transition(.asymmetric(
+                        insertion: .opacity,
+                        removal: .opacity.animation(Motion.reduced(Motion.tap))
+                    ))
             }
         }
         .frame(width: surfaceWidth, height: surfaceHeight, alignment: .top)

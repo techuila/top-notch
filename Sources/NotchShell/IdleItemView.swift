@@ -3,28 +3,48 @@ import SwiftUI
 
 /// Draws one idle slot item.
 ///
-/// Artwork and waveform are drawn for real, in place: the open and close morphs are a
-/// pure expand and shrink (owner decision superseding the travel design), so the idle
-/// bar's elements fade with the bar instead of flying to the pane's layout. No `AnyView`
-/// anywhere in this path: every case resolves to a concrete view.
+/// Artwork travels (owner decision, 2026-08-12): a leading slot draws a clear anchor
+/// and the pixels are the single travelling instance in `TravelLayer`, matched here so
+/// the art flies between this slot and the music tile instead of hiding and showing.
+/// The waveform and everything else are drawn for real, in place, and fade with the
+/// bar. No `AnyView` anywhere in this path: every case resolves to a concrete view.
 struct IdleItemView: View {
     let entry: IdleEntry
     /// Side of the expanded music tile. The thumb derives its corner radius from it so
-    /// the two sizes still read as the same object even though neither morphs into the
-    /// other any more.
+    /// the rounding reads correctly at both ends of the travel.
     let artworkFullSize: CGFloat
+    /// The travel namespace, passed by the leading slots only. Nil (the rotor) draws
+    /// artwork in place; in practice artwork is always parked on the left, never rotating.
+    var travel: Namespace.ID?
+    var isTravelSource: Bool = false
 
     var body: some View {
         switch entry.item {
         case .artwork(let image):
-            ArtworkView(image: image, fullSize: artworkFullSize)
-                .frame(width: Metrics.artworkIdleSize, height: Metrics.artworkIdleSize)
+            if let travel {
+                Color.clear
+                    .frame(width: Metrics.artworkIdleSize, height: Metrics.artworkIdleSize)
+                    .matchedGeometryEffect(
+                        id: NotchTravelID.artwork.rawValue, in: travel, isSource: isTravelSource
+                    )
+            } else {
+                ArtworkView(image: image, fullSize: artworkFullSize)
+                    .frame(width: Metrics.artworkIdleSize, height: Metrics.artworkIdleSize)
+            }
 
         case .waveform(let levels):
-            // Playing is inferred from the levels themselves: the generator rests at
-            // 0.05, so anything meaningfully above that is live music.
-            NotchWaveform(levels: levels, isPlaying: levels.contains { $0 > 0.06 })
-                .frame(width: Metrics.rotorWidth, height: Metrics.rotorHeight)
+            if let travel {
+                Color.clear
+                    .frame(width: Metrics.rotorWidth, height: Metrics.rotorHeight)
+                    .matchedGeometryEffect(
+                        id: NotchTravelID.waveform.rawValue, in: travel, isSource: isTravelSource
+                    )
+            } else {
+                // Playing is inferred from the levels themselves: the generator rests
+                // at 0.05, so anything meaningfully above that is live music.
+                NotchWaveform(levels: levels, isPlaying: levels.contains { $0 > 0.06 })
+                    .frame(width: Metrics.rotorWidth, height: Metrics.rotorHeight)
+            }
 
         case .ring(let progress, let label, let span):
             RingSlot(

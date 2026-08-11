@@ -60,6 +60,11 @@ enum ShellMetrics {
     /// Minimum gap between two pane steps driven by a classic mouse wheel.
     static let wheelDebounce: CFTimeInterval = 0.22
 
+    /// Width of the music pane's trailing waveform column, mirrored here so the
+    /// travelling waveform's expanded anchor lands exactly on it. NotchCore gap:
+    /// the pane hardcodes the same number; both belong in `Metrics`.
+    static let expandedWaveWidth: CGFloat = 26
+
     /// Accumulated horizontal trackpad travel that commits one pane step.
     static let swipeThreshold: CGFloat = 60
 

@@ -1,22 +1,17 @@
 import NotchCore
 import SwiftUI
 
-/// The open panel: pill row, then the horizontally paging pane host, plus the landing
-/// anchors the travelling elements move to.
+/// The open panel: pill row, then the horizontally paging pane host. The progress
+/// line's expanded anchor lives in `TravelLayer`, not here: a view fading out with a
+/// transition no longer updates, so an anchor mounted in this panel would keep
+/// claiming its source role all through the close morph and fight the idle bar's.
 struct ExpandedView: View {
     let model: NotchShellModel
-    let namespace: Namespace.ID
 
     /// `Metrics.paneTop` is measured from the top of the panel, so the gap under the pills
     /// is whatever is left after the pill band.
     private var pillToPaneGap: CGFloat {
         max(Metrics.paneTop - Metrics.pillRowTop - Metrics.pillRowHeight, 0)
-    }
-
-    /// Where the pane band actually starts: the shared token plus the breathing room the
-    /// pill row gained above it, since everything below the pills shifts down together.
-    private var paneTop: CGFloat {
-        Metrics.paneTop + ShellMetrics.pillBreathingRoom
     }
 
     var body: some View {
@@ -29,76 +24,6 @@ struct ExpandedView: View {
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .overlay(alignment: .topLeading) {
-            if model.landed == .music { artworkAnchor }
-        }
-        .overlay(alignment: .topTrailing) {
-            if model.landed == .music { waveformAnchor }
-        }
-        .overlay(alignment: .bottom) { progressAnchor }
-    }
-
-    /// The music pane's content band. The travelling elements hand off to the pane's own
-    /// artwork, waveform and scrubber on open, so the anchors sit where that pane lays
-    /// them out: leading and trailing at the pane inset, centred in its content height.
-    private var musicContentHeight: CGFloat {
-        model.pane(.music)?.contentHeight ?? Metrics.defaultPaneHeight
-    }
-
-    private var artworkAnchor: some View {
-        Color.clear
-            .frame(width: ShellMetrics.expandedArtwork, height: ShellMetrics.expandedArtwork)
-            .matchedGeometryEffect(
-                id: NotchTravelID.artwork.rawValue, in: namespace, isSource: true
-            )
-            .padding(.leading, Metrics.paneInset)
-            // The pane top-aligns the tile with the title, so the anchor sits at the
-            // band's top with no centering term.
-            .padding(.top, paneTop)
-            .allowsHitTesting(false)
-    }
-
-    private var waveformAnchor: some View {
-        Color.clear
-            .frame(width: ShellMetrics.expandedWaveWidth, height: ShellMetrics.expandedWaveHeight)
-            .matchedGeometryEffect(
-                id: NotchTravelID.waveform.rawValue, in: namespace, isSource: true
-            )
-            .padding(.trailing, Metrics.paneInset)
-            .padding(
-                .top,
-                paneTop + max((musicContentHeight - ShellMetrics.expandedWaveHeight) / 2, 0)
-            )
-            .allowsHitTesting(false)
-    }
-
-    /// Where the travelling progress line lands while the panel is open. On the music
-    /// pane it detaches from the border and becomes the scrubber; on every other pane it
-    /// stays a border line along the panel's bottom edge, exactly as it reads when idle.
-    /// One anchor, moved between the two positions, so the single travelling instance in
-    /// `TravelLayer` follows it rather than ever being duplicated.
-    @ViewBuilder private var progressAnchor: some View {
-        if model.landed == .music {
-            Color.clear
-                .frame(height: Metrics.idleProgressHeight)
-                .matchedGeometryEffect(
-                    id: NotchTravelID.progress.rawValue, in: namespace, isSource: true
-                )
-                .padding(.horizontal, Metrics.paneInset)
-                .padding(.bottom, Metrics.paneBottom)
-                .allowsHitTesting(false)
-        } else {
-            Color.clear
-                .frame(height: Metrics.idleProgressHeight)
-                .matchedGeometryEffect(
-                    id: NotchTravelID.progress.rawValue, in: namespace, isSource: true
-                )
-                // Stops short of where the bottom corners curve away, matching the idle
-                // presentation of the same line.
-                .padding(.horizontal, ShellMetrics.expandedProgressInset)
-                .padding(.bottom, ShellMetrics.progressEdgeLift)
-                .allowsHitTesting(false)
-        }
     }
 }
 
@@ -148,42 +73,37 @@ struct PillView: View {
     }
 }
 
-/// Horizontally paging pane host. Snap comes from `.viewAligned`, momentum from the real
-/// scroll view underneath, and the indicator is never drawn: `.never`, not `.hidden`,
-/// because `.hidden` still yields to the system-wide "Always show scroll bars" setting.
+/// The pane strip, offset-driven: every pane sits in one row and the row is translated
+/// so the landed pane fills the viewport, with everything else clipped away. This
+/// replaced the scroll-view host (owner decision, 2026-08-12): a scroll viewport can be
+/// born mispositioned, and however hard the open asserted the position it kept showing
+/// the leftmost pane (music) under another pane's selected pill. Offset math cannot be
+/// mispositioned - the landed pane is shown, always - and a pane change still reads as
+/// the strip sliding, never a swap. Swipes and wheel steps land through the shell's
+/// wheel monitor; pills jump directly.
 struct PaneHost: View {
-    @Bindable var model: NotchShellModel
+    let model: NotchShellModel
+
+    private var index: Int {
+        model.order.firstIndex(of: model.landed) ?? 0
+    }
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal) {
-                // Identity must be `PaneID` itself, not `PaneID.id`, or the scroll position
-                // binding has nothing to match against and programmatic jumps do nothing.
-                // Top alignment so a pane taller than the landed one hangs below the host
-                // and is clipped there, never shoved up under the pill row.
-                LazyHStack(alignment: .top, spacing: 0) {
-                    ForEach(model.order, id: \.self) { id in
-                        PaneSlot(model: model, id: id)
-                    }
-                }
-                .scrollTargetLayout()
-            }
-            .scrollIndicators(.never, axes: [.horizontal, .vertical])
-            .scrollTargetBehavior(.viewAligned)
-            .scrollPosition(id: $model.scrollTarget)
-            .task {
-                // A scroll view acts on a change of position, not on the value it is born
-                // holding, so opening on anything but the first pane has to be asserted
-                // once the content exists. Unanimated: this is the opening frame.
-                await Task.yield()
-                var transaction = Transaction()
-                transaction.disablesAnimations = true
-                withTransaction(transaction) {
-                    proxy.scrollTo(model.landed, anchor: .center)
-                }
+        // Top alignment so a pane taller than the landed one hangs below the host and
+        // is clipped there, never shoved up under the pill row.
+        HStack(alignment: .top, spacing: 0) {
+            ForEach(model.order, id: \.self) { id in
+                PaneSlot(model: model, id: id)
             }
         }
-        .frame(height: model.landedContentHeight)
+        .offset(x: -CGFloat(index) * Metrics.expandedWidth)
+        .frame(
+            width: Metrics.expandedWidth,
+            height: model.landedContentHeight,
+            alignment: .topLeading
+        )
+        .clipped()
+        .notchAnimation(Motion.morph, value: index)
         .notchAnimation(Motion.morph, value: model.landedContentHeight)
     }
 }

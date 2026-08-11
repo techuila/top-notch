@@ -40,8 +40,16 @@ struct NotchRootView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
+            // Pure expand and shrink (owner decision): the surface resizes and each
+            // side's content fades in with its state. Exits are INSTANT: a departing
+            // view rides the surface's leading edge, which travels inward as the
+            // centred surface narrows, so any exit fade - however fast - reads as a
+            // second ghost surface sliding sideways while it dims. The identity
+            // removal unmounts the departing side on the exact frame the phase flips,
+            // before the edges start moving.
             if isExpanded {
-                ExpandedView(model: model, namespace: travel)
+                ExpandedView(model: model)
+                    .transition(.asymmetric(insertion: .opacity, removal: .identity))
             } else {
                 IdleBarView(
                     model: model,
@@ -49,6 +57,7 @@ struct NotchRootView: View {
                     namespace: travel,
                     onWidth: { idleWidth = $0 }
                 )
+                .transition(.asymmetric(insertion: .opacity, removal: .identity))
             }
         }
         .frame(width: surfaceWidth, height: surfaceHeight, alignment: .top)
@@ -65,23 +74,6 @@ struct NotchRootView: View {
         .notchMaterial(
             isExpanded: isExpanded, cornerRadius: cornerRadius, flareRadius: flareRadius
         )
-        // Behind-window glass beneath the material's thinned scrim, masked to the full
-        // silhouette. Structural, not alpha: at idle it leaves the hierarchy entirely,
-        // so the window server stops backdrop sampling the moment the close morph
-        // finishes. The opacity transition rides the same morph, so the surface
-        // cross-dissolves in place instead of swapping. The mask is fixed at the
-        // expanded radii; every cut it makes is deeper than any intermediate
-        // silhouette's, so the glass never pokes past the drawn outline mid-morph.
-        .background {
-            if isExpanded, Appearance.shared.material != .solid {
-                GlassBacking(
-                    flareRadius: Metrics.expandedFlareRadius,
-                    cornerRadius: Metrics.expandedCornerRadius
-                )
-                .transition(.opacity)
-                .allowsHitTesting(false)
-            }
-        }
         // A pane asking the notch to acknowledge a moment. Anchored to the top because the
         // notch hangs off the top edge of the screen, so scaling from the centre would lift
         // it away from the bezel it is supposed to be part of.

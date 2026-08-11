@@ -20,6 +20,12 @@ struct IdleBarView: View {
             : ShellMetrics.idleShoulderPadding
     }
 
+    /// Side of the expanded music tile, handed down so the artwork thumb's rounding
+    /// stays proportional to the tile it stands in for.
+    private var musicBand: CGFloat {
+        model.pane(.music)?.contentHeight ?? Metrics.defaultPaneHeight
+    }
+
     var body: some View {
         HStack(spacing: 0) {
             leading
@@ -41,10 +47,10 @@ struct IdleBarView: View {
     private var leading: some View {
         HStack(spacing: Metrics.slotSpacing) {
             if let pinned = composition.pinned {
-                IdleItemView(entry: pinned, namespace: namespace, isSource: isSource)
+                IdleItemView(entry: pinned, artworkFullSize: musicBand)
             }
             if let identity = composition.identity {
-                IdleItemView(entry: identity, namespace: namespace, isSource: isSource)
+                IdleItemView(entry: identity, artworkFullSize: musicBand)
             }
         }
         .padding(.horizontal, composition.hasLeading ? shoulderPadding : 0)
@@ -54,8 +60,7 @@ struct IdleBarView: View {
         RotorView(
             entries: composition.rotor,
             index: model.rotorIndex,
-            namespace: namespace,
-            isSource: isSource
+            artworkFullSize: musicBand
         )
         .padding(.horizontal, composition.rotor.isEmpty ? 0 : shoulderPadding)
     }
@@ -80,8 +85,7 @@ struct IdleBarView: View {
 struct RotorView: View {
     let entries: [IdleEntry]
     let index: Int
-    let namespace: Namespace.ID
-    let isSource: Bool
+    let artworkFullSize: CGFloat
 
     private var clamped: Int {
         entries.isEmpty ? 0 : min(max(index, 0), entries.count - 1)
@@ -90,13 +94,9 @@ struct RotorView: View {
     var body: some View {
         ZStack {
             ForEach(Array(entries.enumerated()), id: \.offset) { offset, entry in
-                IdleItemView(
-                    entry: entry,
-                    namespace: namespace,
-                    isSource: isSource && offset == clamped
-                )
-                .frame(width: Metrics.rotorWidth, height: Metrics.rotorHeight)
-                .offset(y: CGFloat(offset - clamped) * Metrics.rotorHeight)
+                IdleItemView(entry: entry, artworkFullSize: artworkFullSize)
+                    .frame(width: Metrics.rotorWidth, height: Metrics.rotorHeight)
+                    .offset(y: CGFloat(offset - clamped) * Metrics.rotorHeight)
             }
         }
         .frame(
@@ -108,55 +108,44 @@ struct RotorView: View {
     }
 }
 
-/// The three travelling elements, rendered by the shell while the notch is closed.
+/// The one element that lives through the open and close morphs: the bottom-edge
+/// progress line.
 ///
-/// Exactly one instance of each exists at any moment: while idle or in proximity these
-/// are the rendered views, matched to the idle anchors. The moment the panel opens on
-/// the music pane, the pane's own artwork, waveform and scrubber take over, and these
-/// leave through the matched-geometry anchors in `ExpandedView`, which sit where the
-/// pane lays those elements out. Rendering both at once is what put a second artwork
-/// tile and a second progress line on screen.
+/// The open and close transitions are a pure expand and shrink (owner decision):
+/// artwork and waveform no longer fly between the idle slots and the pane's layout,
+/// they are drawn in place by whichever state owns them and simply fade with it. The
+/// progress line stays because it rides the surface's bottom edge rather than crossing
+/// the panel: idle border, expanded border on non-music panes, and hidden while the
+/// music pane's scrubber owns it. Exactly one instance, mounted continuously; its
+/// border anchors move with the morphing surface and it follows them.
 ///
-/// The progress line alone also lives through the expanded phase whenever the landed
-/// pane is not music: it follows `ExpandedView`'s border anchor along the panel's
-/// bottom edge, and travels to the scrubber only when the user lands on music. It is
-/// still the same single instance the whole way.
+/// The expanded anchor lives here rather than in `ExpandedView` because a view fading
+/// out with a transition no longer updates: an anchor frozen inside the removing panel
+/// kept claiming `isSource` through the close and fought the idle bar's anchor. Here it
+/// unmounts the instant the phase leaves `.expanded`, so exactly one side sources the
+/// line's geometry at any moment of the morph.
 struct TravelLayer: View {
     let model: NotchShellModel
     let namespace: Namespace.ID
 
-    private var showsBorderProgress: Bool {
-        model.phase != .expanded || model.landed != .music
-    }
+    private var isExpanded: Bool { model.phase == .expanded }
+    private var isOnMusic: Bool { model.landed == .music }
 
     var body: some View {
-        let artwork = model.travellingArtwork
-        let composition = model.composition
         ZStack(alignment: .topLeading) {
-            if model.phase != .expanded {
-                if artwork.present {
-                    ArtworkView(image: artwork.image)
-                        .matchedGeometryEffect(
-                            id: NotchTravelID.artwork.rawValue, in: namespace, isSource: false
-                        )
-                }
-                if let levels = model.travellingWaveform {
-                    // Playing is inferred from the levels themselves: the generator rests
-                    // at 0.05, so anything meaningfully above that is live music.
-                    NotchWaveform(
-                        levels: levels,
-                        isPlaying: levels.contains { $0 > 0.06 }
-                    )
-                    .matchedGeometryEffect(
-                        id: NotchTravelID.waveform.rawValue, in: namespace, isSource: false
-                    )
-                }
+            // Identity transition: the anchor must register and unregister on the
+            // exact frame the phase flips, never linger through a fade.
+            if isExpanded {
+                expandedProgressAnchor.transition(.identity)
             }
-            if showsBorderProgress, let progress = composition.progress {
+
+            if let progress = model.composition.progress {
                 NotchProgress(
                     value: progress,
                     height: Metrics.idleProgressHeight,
-                    tint: Style.accent(for: composition.progressPane ?? model.focusedID),
+                    tint: Style.accent(
+                        for: model.composition.progressPane ?? model.focusedID
+                    ),
                     // Music's accent is plain white. At full strength on a black notch
                     // that is a glowing stub, not a progress line.
                     prominence: 0.25
@@ -164,8 +153,32 @@ struct TravelLayer: View {
                 .matchedGeometryEffect(
                     id: NotchTravelID.progress.rawValue, in: namespace, isSource: false
                 )
+                .opacity(isExpanded && isOnMusic ? 0 : 1)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .allowsHitTesting(false)
+    }
+
+    /// Where the line sits while the panel is open: the scrubber position on the music
+    /// pane, the bottom border everywhere else. One anchor whose paddings move between
+    /// the two, so the line follows a moving target instead of a remounting one; the
+    /// border insets stop short of where the bottom corners curve away, matching the
+    /// idle presentation of the same line.
+    private var expandedProgressAnchor: some View {
+        Color.clear
+            .frame(height: Metrics.idleProgressHeight)
+            .matchedGeometryEffect(
+                id: NotchTravelID.progress.rawValue, in: namespace, isSource: true
+            )
+            .padding(
+                .horizontal,
+                isOnMusic ? Metrics.paneInset : ShellMetrics.expandedProgressInset
+            )
+            .padding(
+                .bottom,
+                isOnMusic ? Metrics.paneBottom : ShellMetrics.progressEdgeLift
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
     }
 }

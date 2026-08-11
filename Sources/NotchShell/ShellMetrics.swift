@@ -44,15 +44,6 @@ enum ShellMetrics {
     /// Headroom above the tallest pane so a pane can grow without resizing the window.
     static let heightHeadroom: CGFloat = 120
 
-    /// Where the album art lands once the panel is open: the artwork tile the music pane
-    /// lays out at its leading edge. Must match that tile or the travel overshoots it.
-    static let expandedArtwork: CGFloat = 74
-
-    /// Where the waveform lands once the panel is open: the trailing waveform slot the
-    /// music pane lays out. Must match that slot for the same reason.
-    static let expandedWaveWidth: CGFloat = 26
-    static let expandedWaveHeight: CGFloat = 46
-
     /// Pill row spacing and horizontal text inset.
     static let pillSpacing: CGFloat = 6
     static let pillInset: CGFloat = 12
@@ -68,6 +59,9 @@ enum ShellMetrics {
 
     /// Minimum gap between two pane steps driven by a classic mouse wheel.
     static let wheelDebounce: CFTimeInterval = 0.22
+
+    /// Accumulated horizontal trackpad travel that commits one pane step.
+    static let swipeThreshold: CGFloat = 60
 
     /// How far past the collapsed notch the invisible drag catcher reaches, so a drag
     /// aimed at the top of the screen is caught before the cursor is on the housing.

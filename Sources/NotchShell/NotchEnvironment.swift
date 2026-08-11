@@ -10,15 +10,11 @@ public enum NotchPhase: Equatable, Sendable {
     public var isExpanded: Bool { self == .expanded }
 }
 
-/// Identifiers for the elements that travel between the idle bar and the expanded panel.
-///
-/// The shell owns the source anchors for all three and renders the moving views itself.
-/// A pane that wants one of them to land somewhere specific attaches
-/// `.matchedGeometryEffect(id: NotchTravelID.artwork.rawValue, in: namespace, isSource: false)`
-/// to its own view, reading the namespace from `\.notchNamespace`.
+/// Identifier for the one element that persists across the idle bar and the expanded
+/// panel: the bottom-edge progress line. Artwork and waveform used to travel too; the
+/// open and close morphs are now a pure expand and shrink (owner decision), so each
+/// state draws those in place and only the border line is matched between layouts.
 public enum NotchTravelID: String, Hashable, Sendable, CaseIterable {
-    case artwork
-    case waveform
     case progress
 }
 

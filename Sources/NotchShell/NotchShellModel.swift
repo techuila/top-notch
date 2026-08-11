@@ -170,20 +170,6 @@ final class NotchShellModel {
         return entries[min(max(rotorIndex, 0), entries.count - 1)]
     }
 
-    /// The album art that travels between idle and expanded, if the focused pane has one.
-    var travellingArtwork: (present: Bool, image: NotchImage?) {
-        let comp = composition
-        if case .artwork(let image) = comp.identity?.item { return (true, image) }
-        if case .artwork(let image) = comp.pinned?.item { return (true, image) }
-        return (false, nil)
-    }
-
-    /// The waveform travels only while it is the item actually parked in the rotor.
-    var travellingWaveform: [Float]? {
-        if case .waveform(let levels) = visibleRotorEntry?.item { return levels }
-        return nil
-    }
-
     // MARK: State
 
     func setPhase(_ next: NotchPhase) {

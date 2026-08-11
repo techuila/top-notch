@@ -3,29 +3,28 @@ import SwiftUI
 
 /// Draws one idle slot item.
 ///
-/// Artwork and waveform are drawn as clear anchors here and rendered for real by
-/// `TravelLayer`, so the same view survives the jump from the idle bar to the open panel.
-/// No `AnyView` anywhere in this path: every case resolves to a concrete view.
+/// Artwork and waveform are drawn for real, in place: the open and close morphs are a
+/// pure expand and shrink (owner decision superseding the travel design), so the idle
+/// bar's elements fade with the bar instead of flying to the pane's layout. No `AnyView`
+/// anywhere in this path: every case resolves to a concrete view.
 struct IdleItemView: View {
     let entry: IdleEntry
-    let namespace: Namespace.ID
-    let isSource: Bool
+    /// Side of the expanded music tile. The thumb derives its corner radius from it so
+    /// the two sizes still read as the same object even though neither morphs into the
+    /// other any more.
+    let artworkFullSize: CGFloat
 
     var body: some View {
         switch entry.item {
-        case .artwork:
-            Color.clear
+        case .artwork(let image):
+            ArtworkView(image: image, fullSize: artworkFullSize)
                 .frame(width: Metrics.artworkIdleSize, height: Metrics.artworkIdleSize)
-                .matchedGeometryEffect(
-                    id: NotchTravelID.artwork.rawValue, in: namespace, isSource: isSource
-                )
 
-        case .waveform:
-            Color.clear
+        case .waveform(let levels):
+            // Playing is inferred from the levels themselves: the generator rests at
+            // 0.05, so anything meaningfully above that is live music.
+            NotchWaveform(levels: levels, isPlaying: levels.contains { $0 > 0.06 })
                 .frame(width: Metrics.rotorWidth, height: Metrics.rotorHeight)
-                .matchedGeometryEffect(
-                    id: NotchTravelID.waveform.rawValue, in: namespace, isSource: isSource
-                )
 
         case .ring(let progress, let label, let span):
             RingSlot(
@@ -106,13 +105,16 @@ private struct RingSlot: View {
 }
 
 /// Album art at whatever size the matched geometry hands it. The corner radius scales with
-/// the travel so the same rounding reads correctly at 24pt and at full size.
+/// the travel so the same rounding reads correctly at idle size and at full size, where it
+/// lands exactly on the pane tile's `Style.artworkRadius`.
 struct ArtworkView: View {
     let image: NotchImage?
+    /// The side the tile has when fully expanded; the radius scales relative to it.
+    let fullSize: CGFloat
 
     var body: some View {
         GeometryReader { geo in
-            let radius = Style.artworkRadius * (geo.size.width / ShellMetrics.expandedArtwork)
+            let radius = Style.artworkRadius * (geo.size.width / max(fullSize, 1))
             Group {
                 if let image, let decoded = ArtworkCache.shared.image(for: image) {
                     Image(nsImage: decoded)

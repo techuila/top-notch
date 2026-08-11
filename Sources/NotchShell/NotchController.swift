@@ -25,6 +25,8 @@ public final class NotchController {
     private var closeTask: Task<Void, Never>?
     private var lastSample: CFTimeInterval = 0
     private var lastWheel: CFTimeInterval = 0
+    private var swipeTravel: CGFloat = 0
+    private var swipeCommitted = false
     private var displaysAsleep = false
 
     private var dragCatcher: AnyView?
@@ -472,11 +474,15 @@ public final class NotchController {
 
     // MARK: Scroll wheel
 
-    /// A plain mouse only produces vertical deltas, so map those onto pane steps. Trackpad
-    /// events carry precise deltas and are left alone, keeping their native momentum.
+    /// Pane stepping from scroll hardware. A plain mouse only produces vertical deltas,
+    /// so those map onto pane steps directly. A trackpad swipe carries precise deltas
+    /// and steps through `handleSwipe`; the pane strip is offset-driven, so the shell
+    /// steps it here instead of a scroll view tracking the finger.
     private func handleWheel(_ event: NSEvent) -> Bool {
         guard let model, model.phase == .expanded else { return false }
-        guard !event.hasPreciseScrollingDeltas else { return false }
+        if event.hasPreciseScrollingDeltas {
+            return handleSwipe(event, model: model)
+        }
 
         let raw = event.scrollingDeltaY
         let delta = event.isDirectionInvertedFromDevice ? -raw : raw
@@ -485,13 +491,38 @@ public final class NotchController {
         let now = CACurrentMediaTime()
         guard now - lastWheel > ShellMetrics.wheelDebounce else { return true }
 
-        let order = model.order
-        guard let current = order.firstIndex(of: model.landed) else { return true }
-        let next = delta < 0 ? current + 1 : current - 1
-        guard order.indices.contains(next) else { return true }
-
         lastWheel = now
-        withAnimation(Motion.reduced(Motion.morph)) { model.land(on: order[next]) }
+        step(model, by: delta < 0 ? 1 : -1)
         return true
+    }
+
+    /// One step per swipe. Horizontal travel accumulates from the gesture's start and
+    /// commits a single step once past the threshold; momentum is swallowed so a flick
+    /// cannot machine-gun through panes. Vertical-dominant events pass through untouched
+    /// so a pane keeps its own scrolling.
+    private func handleSwipe(_ event: NSEvent, model: NotchShellModel) -> Bool {
+        if event.phase == .began {
+            swipeTravel = 0
+            swipeCommitted = false
+        }
+
+        let dx = event.scrollingDeltaX
+        guard abs(dx) > abs(event.scrollingDeltaY) else { return false }
+        guard event.momentumPhase.isEmpty else { return true }
+
+        swipeTravel += dx
+        if !swipeCommitted, abs(swipeTravel) >= ShellMetrics.swipeThreshold {
+            swipeCommitted = true
+            step(model, by: swipeTravel < 0 ? 1 : -1)
+        }
+        return true
+    }
+
+    private func step(_ model: NotchShellModel, by delta: Int) {
+        let order = model.order
+        guard let current = order.firstIndex(of: model.landed) else { return }
+        let next = current + delta
+        guard order.indices.contains(next) else { return }
+        withAnimation(Motion.reduced(Motion.morph)) { model.land(on: order[next]) }
     }
 }

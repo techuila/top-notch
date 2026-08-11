@@ -14,7 +14,10 @@ struct MusicPaneView: View {
     private var state: NowPlayingState { pane.coordinator.state }
 
     var body: some View {
-        HStack(spacing: 14) {
+        // Top-aligned, the classic player layout: the top of the art lines up with the
+        // top of the title. Centring the 74pt tile against the taller text column put
+        // the title above the art, which read as misproportioned.
+        HStack(alignment: .top, spacing: 14) {
             ArtworkView(artwork: state.track?.artwork)
 
             VStack(alignment: .leading, spacing: 4) {
@@ -38,6 +41,9 @@ struct MusicPaneView: View {
             WaveformView(levels: pane.levels, isPlaying: state.status == .playing)
                 .frame(width: state.isLive ? 26 : 0)
                 .opacity(state.isLive ? 1 : 0)
+                // Stays vertically centred as before the top-alignment change, so the
+                // shell's travel anchor for the waveform still lands on it.
+                .frame(maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .paneInsets()

@@ -154,6 +154,7 @@ public actor AppleScriptSource: NowPlayingSource {
             Self.wrap(body, for: kind), reuse: reuse
         )
         note(failure: result, for: kind)
+        if case .success = result { applyOptimistically(command, to: kind) }
 
         // Read the result back, because seeking does not always broadcast and the
         // scrubber would otherwise sit on a stale anchor.
@@ -162,9 +163,33 @@ public actor AppleScriptSource: NowPlayingSource {
         // scripting properties a moment later, so an immediate read returns the state
         // from before the command and, being newer than the broadcast that followed it,
         // would win and stick. Settle first, then read, and let `refresh` discard the
-        // result anyway if a broadcast beat it.
-        try? await Task.sleep(for: .milliseconds(350))
+        // result anyway if a broadcast beat it. Mode commands settle far slower than
+        // transport (measured on Spotify: shuffle still stale at 400ms), hence the
+        // longer wait and the optimistic apply above covering the gap.
+        let settle: Duration = switch command {
+        case .setShuffle, .setRepeat: PlayerModes.settleDelay
+        default: .milliseconds(350)
+        }
+        try? await Task.sleep(for: settle)
         await refresh(kind)
+    }
+
+    /// Shows a mode command as landed the moment the player accepted it, so the button
+    /// answers the tap instead of waiting out the settle. The read that follows
+    /// corrects it if the player refused after accepting.
+    private func applyOptimistically(_ command: TransportCommand, to kind: PlayerKind) {
+        guard var snapshot = snapshots[kind] else { return }
+        switch command {
+        case .setShuffle(let on):
+            snapshot.shuffle = on
+        case .setRepeat(let mode):
+            snapshot.repeatMode = PlayerModes.effective(repeatMode: mode, for: kind)
+        default:
+            return
+        }
+        snapshot.updatedAt = .now
+        snapshots[kind] = snapshot
+        publish()
     }
 
     /// The player a command should go to: whatever the state came from, else the only

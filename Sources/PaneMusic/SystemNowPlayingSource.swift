@@ -29,6 +29,18 @@ public actor SystemNowPlayingSource: NowPlayingSource {
     private var artworkTask: Task<Void, Never>?
     private var running = false
 
+    /// Shuffle and repeat read over Apple Events, because the MediaRemote payload never
+    /// carries them for the players that matter (verified live: Spotify's payload has
+    /// neither key). Refreshed once per track or player change, once per notch open,
+    /// and after our own mode commands. Never polled.
+    private var fallbackModes = PlayerModes.Modes.unknown
+    private var modesBundleID: String?
+    private var modesTrackID: String?
+    private var modesTask: Task<Void, Never>?
+    /// True when the adapter payload itself reported a mode, in which case the payload
+    /// is authoritative and the Apple Event sidecar stays quiet.
+    private var payloadHasModes = false
+
     /// Set when the helper has died repeatedly. Makes `probe()` refuse, so the coordinator
     /// stops choosing this source after it has proven unreliable.
     private var disabled = false
@@ -76,13 +88,24 @@ public actor SystemNowPlayingSource: NowPlayingSource {
         artworkTask?.cancel()
         artworkTask = nil
         artworkTrackID = nil
+        modesTask?.cancel()
+        modesTask = nil
+        fallbackModes = .unknown
+        modesBundleID = nil
+        modesTrackID = nil
+        payloadHasModes = false
         continuation?.finish()
         continuation = nil
         current = .idle
     }
 
-    /// The adapter pushes. There is no poll here to slow down, at any cadence.
-    public func setCadence(_ cadence: NowPlayingCadence) async {}
+    /// The adapter pushes, so there is no poll here to slow down at any cadence. The
+    /// one thing a foreground open buys is a fresh read of the Apple Event mode
+    /// fallback, so a shuffle toggled inside the player itself is right by the time
+    /// anyone can see the button. One event per user action, still zero timers.
+    public func setCadence(_ cadence: NowPlayingCadence) async {
+        if cadence == .foreground { refreshModes(force: true) }
+    }
 
     public func events() async -> AsyncStream<NowPlayingState> {
         continuation?.finish()
@@ -114,16 +137,61 @@ public actor SystemNowPlayingSource: NowPlayingSource {
             let micros = Int(max(seconds, 0) * 1_000_000)
             AdapterProcess.detached(location, ["seek", String(micros)])
         case .setShuffle(let on):
-            let mode: MRShuffleMode = on ? .tracks : .disabled
-            AdapterProcess.detached(location, ["shuffle", String(mode.rawValue)])
-        case .setRepeat(let repeatMode):
-            let mode: MRRepeatMode = switch repeatMode {
-            case .off: .disabled
-            case .one: .track
-            case .all: .playlist
+            // MediaRemote's mode setters silently no-op on Spotify (verified live:
+            // `shuffle 3` exits 0, `shuffling` stays false), so a scriptable player is
+            // driven over Apple Events and read back. The adapter route stays for apps
+            // that actually implement this side of MediaRemote.
+            if let kind = scriptableTarget {
+                await PlayerModes.set(shuffle: on, for: kind)
+                // Optimistic: the button confirms now, the read at settle corrects it
+                // if the player refused (some Spotify contexts do not allow shuffle).
+                applyModes(
+                    PlayerModes.Modes(shuffle: on, repeatMode: fallbackModes.repeatMode),
+                    for: kind.bundleID
+                )
+                await rereadModesAfterSet()
+            } else {
+                let mode: MRShuffleMode = on ? .tracks : .disabled
+                AdapterProcess.detached(location, ["shuffle", String(mode.rawValue)])
             }
-            AdapterProcess.detached(location, ["repeat", String(mode.rawValue)])
+        case .setRepeat(let repeatMode):
+            if let kind = scriptableTarget {
+                await PlayerModes.set(repeatMode: repeatMode, for: kind)
+                applyModes(
+                    PlayerModes.Modes(
+                        shuffle: fallbackModes.shuffle,
+                        repeatMode: PlayerModes.effective(repeatMode: repeatMode, for: kind)
+                    ),
+                    for: kind.bundleID
+                )
+                await rereadModesAfterSet()
+            } else {
+                let mode: MRRepeatMode = switch repeatMode {
+                case .off: .disabled
+                case .one: .track
+                case .all: .playlist
+                }
+                AdapterProcess.detached(location, ["repeat", String(mode.rawValue)])
+            }
         }
+    }
+
+    /// The player mode commands should be scripted at: the app owning playback, when
+    /// it is one we have a dialect for, unless its payload already carries the modes,
+    /// in which case MediaRemote handles them and Apple Events stay out of it.
+    private var scriptableTarget: PlayerKind? {
+        guard !payloadHasModes, let id = current.player?.id,
+              let kind = PlayerCatalog.kind(forBundleID: id), kind.isRunning
+        else { return nil }
+        return kind
+    }
+
+    /// Players update their scripting properties well after accepting a command, so an
+    /// immediate read returns the old state and would revert the optimistic emit.
+    /// Settle first, then read.
+    private func rereadModesAfterSet() async {
+        try? await Task.sleep(for: PlayerModes.settleDelay)
+        refreshModes(force: true)
     }
 
     // MARK: Helper
@@ -229,8 +297,11 @@ public actor SystemNowPlayingSource: NowPlayingSource {
             elapsed: elapsed,
             capturedAt: capturedAt
         )
-        // Absent modes stay nil, which reads as "this player does not do shuffle" and
-        // hides the controls, exactly right for a podcast or a browser tab.
+        // The payload's own modes win when present. When absent, and only for a player
+        // the Apple Event sidecar covers, the last sidecar read fills in. Everything
+        // else stays nil, which reads as "this player does not do shuffle" and hides
+        // the controls, exactly right for a podcast or a browser tab.
+        payloadHasModes = payload.shuffleMode != nil || payload.repeatMode != nil
         state.shuffle = payload.shuffleMode.map { $0 != MRShuffleMode.disabled.rawValue }
         state.repeatMode = payload.repeatMode.flatMap {
             switch MRRepeatMode(rawValue: $0) {
@@ -240,12 +311,58 @@ public actor SystemNowPlayingSource: NowPlayingSource {
             case nil: nil
             }
         }
+        if !payloadHasModes, payload.bundleIdentifier == modesBundleID {
+            state.shuffle = fallbackModes.shuffle
+            state.repeatMode = fallbackModes.repeatMode
+        }
         if let bundleID = payload.bundleIdentifier {
             state.player = PlayerIdentity(id: bundleID, name: await Self.appName(for: bundleID))
         }
 
         emit(state)
         await fetchArtworkIfNeeded()
+        refreshModes(force: false)
+    }
+
+    // MARK: Mode fallback
+
+    /// Reads shuffle and repeat over Apple Events when the payload will never say.
+    /// Fires on track or player change, on demand with `force`, and otherwise not at
+    /// all. The read lands asynchronously through `applyModes`.
+    private func refreshModes(force: Bool) {
+        guard running, !payloadHasModes else { return }
+        guard let bundleID = current.player?.id, current.track != nil,
+              let kind = PlayerCatalog.kind(forBundleID: bundleID)
+        else {
+            // Unscriptable or nothing loaded: drop any stale modes so a handover from
+            // Spotify to a podcast does not keep Spotify's buttons alive.
+            fallbackModes = .unknown
+            modesBundleID = nil
+            modesTrackID = nil
+            return
+        }
+        if bundleID != modesBundleID { fallbackModes = .unknown }
+        let trackID = current.track?.id
+        guard force || bundleID != modesBundleID || trackID != modesTrackID else { return }
+        modesBundleID = bundleID
+        modesTrackID = trackID
+
+        modesTask?.cancel()
+        modesTask = Task { [weak self] in
+            let modes = await PlayerModes.read(kind)
+            guard !Task.isCancelled else { return }
+            await self?.applyModes(modes, for: bundleID)
+        }
+    }
+
+    private func applyModes(_ modes: PlayerModes.Modes, for bundleID: String) {
+        guard running, current.player?.id == bundleID else { return }
+        fallbackModes = modes
+        guard !payloadHasModes else { return }
+        var state = current
+        state.shuffle = modes.shuffle
+        state.repeatMode = modes.repeatMode
+        emit(state)
     }
 
     private func emit(_ state: NowPlayingState) {

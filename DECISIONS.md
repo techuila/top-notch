@@ -50,6 +50,21 @@ flight read as a ghost element streaking sideways on every close, and the owner 
 it. Positional travel is gone; the move-don't-swap spirit survives as the single
 continuously-morphing surface.
 
+Amended on 2026-08-12: art, waveform and progress line all travel - the owner rejected
+the fade (hide/show is a swap; each element must morph from its idle slot to its place
+in the music pane, one instance each, in the shell's travel layer). The 08-11 "ghost"
+is re-diagnosed: it was the behind-window glass backing, since removed, not the travel.
+
+Same day, the mechanics: both the idle bar and the travel anchors are permanently
+mounted views whose visibility and `isSource` swap with the phase, because a view
+leaving through a transition freezes and keeps claiming its old geometry (that left
+idle items lingering over the open panel). The anchors ride an overlay so their fixed
+sizes never inflate the travel layer past the surface - as layout children they set a
+208pt floor under it, which pushed the bottom-aligned border line below the drawn
+panel on any shorter pane and clipped it away (the drop page, at 178pt). The line
+itself is laid out directly against the surface, not matched. Only the pane content
+still unmounts at idle, fading fast on close; it carries no anchors.
+
 There is a proximity state between idle and expanded: when the cursor comes within range the
 notch breathes slightly wider before any hover, acknowledging without committing.
 

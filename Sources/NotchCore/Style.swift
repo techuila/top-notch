@@ -136,33 +136,31 @@ public final class Appearance {
 public struct NotchMaterial: ViewModifier {
     public var isExpanded: Bool
     public var cornerRadius: CGFloat
+    /// Concave top-corner fillet radius. Zero draws the plain bottom-rounded body; a
+    /// positive value paints the full silhouette, so the flares wear the same surface
+    /// as the panel instead of staying black wings.
+    public var flareRadius: CGFloat
 
-    public init(isExpanded: Bool, cornerRadius: CGFloat) {
+    public init(isExpanded: Bool, cornerRadius: CGFloat, flareRadius: CGFloat = 0) {
         self.isExpanded = isExpanded
         self.cornerRadius = cornerRadius
+        self.flareRadius = flareRadius
     }
 
     public func body(content: Content) -> some View {
         let mode = Appearance.shared.material
         content
             .background {
-                let shape = UnevenRoundedRectangle(
-                    bottomLeadingRadius: cornerRadius,
-                    bottomTrailingRadius: cornerRadius,
-                    style: .continuous
+                let shape = NotchSilhouette(
+                    flareRadius: flareRadius, bottomRadius: cornerRadius
                 )
                 ZStack {
-                    // Black base is always present. The chosen surface fades in over it,
-                    // so the states cross-dissolve in place instead of swapping.
+                    // Black base. In the glass modes it thins to a scrim when expanded,
+                    // because the real glass lives in the shell's behind-window backing
+                    // (an in-window material cannot sample other apps); an opaque fill
+                    // here would hide it. Solid keeps the base at full strength.
                     shape.fill(.black)
-
-                    // Liquid Glass, the real macOS 26 material. Also the base layer of
-                    // the gradient mode, where colour melts down into glass.
-                    if mode != .solid {
-                        shape.fill(.clear)
-                            .glassEffect(.regular, in: shape)
-                            .opacity(isExpanded ? 1 : 0)
-                    }
+                        .opacity(mode == .solid || !isExpanded ? 1 : 0.30)
                     if mode == .gradient {
                         shape.fill(
                             LinearGradient(
@@ -203,18 +201,18 @@ public struct NotchMaterial: ViewModifier {
                 )
             }
             .clipShape(
-                UnevenRoundedRectangle(
-                    bottomLeadingRadius: cornerRadius,
-                    bottomTrailingRadius: cornerRadius,
-                    style: .continuous
-                )
+                NotchSilhouette(flareRadius: flareRadius, bottomRadius: cornerRadius)
             )
     }
 }
 
 public extension View {
-    func notchMaterial(isExpanded: Bool, cornerRadius: CGFloat) -> some View {
-        modifier(NotchMaterial(isExpanded: isExpanded, cornerRadius: cornerRadius))
+    func notchMaterial(
+        isExpanded: Bool, cornerRadius: CGFloat, flareRadius: CGFloat = 0
+    ) -> some View {
+        modifier(NotchMaterial(
+            isExpanded: isExpanded, cornerRadius: cornerRadius, flareRadius: flareRadius
+        ))
     }
 
     /// Standard horizontal padding for pane content.

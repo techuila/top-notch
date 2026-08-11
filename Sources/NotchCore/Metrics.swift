@@ -51,6 +51,11 @@ public enum Metrics {
     public static let expandedCornerRadius: CGFloat = 32
     public static let idleCornerRadius: CGFloat = 17
 
+    /// Concave top-corner fillets where the surface meets the screen edge. They grow
+    /// with the open morph so the flare keeps its proportion against the panel.
+    public static let flareRadius: CGFloat = 8
+    public static let expandedFlareRadius: CGFloat = 15
+
     /// Vertical band occupied by the pill row, measured from the top of the panel.
     public static let pillRowTop: CGFloat = 40
     public static let pillRowHeight: CGFloat = 24

@@ -61,6 +61,15 @@ Appearance submenu - Liquid Glass (default), Gradient (accent colour melting dow
 glass), or Solid (warm near-black). Stored in defaults, applied live. The idle black is
 not affected by the choice.
 
+Amended again same day: the glass is real. An in-window material cannot sample other
+apps, which made "glass" read as a solid colour, so the shell hosts an NSVisualEffectView
+with behind-window blending, masked to the silhouette, existing only while the panel is
+open in a glass-family mode. Zero cost at idle is preserved by removing the view
+entirely on close, not hiding it.
+
+Rejected: NSGlassEffectView (macOS 26 has it, but it composites within its own window -
+the exact failure - and cannot take the silhouette mask).
+
 ### Palette - **LOCKED**
 Teenage Engineering OP-1 / EP-133 KO II: warm off-white ink, one loud orange (the only
 shout, owned by pomodoro and the house accent), warm greys, black. Minimalist
@@ -72,6 +81,11 @@ accents.
 The top corners are inverted: where the black surface meets the top screen edge it flares
 outward with a small concave curve, like the hardware notch photographed from below. One
 persistent shape in every state. Set 2026-08-11.
+
+Amended same day: the flare radius morphs with the panel (8pt idle, 15pt expanded) so the
+corners keep their proportion, and the flares wear the same surface as the body - glass,
+gradient or solid - instead of staying black wings. The shape lives in NotchCore
+(`NotchSilhouette`) so the shell, the material and the glass mask share one geometry.
 
 ### App icon - **LOCKED**
 DynamicLake style: the notch is the whole mark - a black top band with the flared pill,
@@ -170,6 +184,12 @@ Transport carries shuffle and repeat with real state. Buttons collapse to zero w
 the playing source cannot report the mode (podcasts, browser tabs). Spotify has no
 repeat-one in AppleScript, so its cycle degrades to off/all cleanly. Commands are explicit
 set operations, never blind toggles.
+
+Amended on 2026-08-11: the MediaRemote payload never carries the modes in practice and
+its mode setters no-op on Spotify (verified against live payload dumps), so state and
+commands go over Apple Events for Spotify and Apple Music even when the system route owns
+transport. Reads happen only on track change, player change, notch open and after our own
+command - never on a timer. First use triggers the one-time macOS Automation consent.
 
 ### Menu bar item and settings - **LOCKED**
 There is one status item in the menu bar, and it is the only chrome outside the notch. It holds

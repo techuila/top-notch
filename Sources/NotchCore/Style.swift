@@ -155,12 +155,29 @@ public struct NotchMaterial: ViewModifier {
                     flareRadius: flareRadius, bottomRadius: cornerRadius
                 )
                 ZStack {
-                    // Black base. In the glass modes it thins to a scrim when expanded,
-                    // because the real glass lives in the shell's behind-window backing
-                    // (an in-window material cannot sample other apps); an opaque fill
-                    // here would hide it. Solid keeps the base at full strength.
+                    // Black base. Pure glass carries no scrim at all when expanded, by
+                    // the owner's call: the surface is only the backing plus the glass
+                    // optics. Gradient keeps a whisper so its tint has ground; solid
+                    // keeps full strength. Idle is always black.
                     shape.fill(.black)
-                        .opacity(mode == .solid || !isExpanded ? 1 : 0.30)
+                        .opacity(
+                            !isExpanded || mode == .solid ? 1
+                                : mode == .gradient ? 0.10 : 0
+                        )
+
+                    // Liquid Glass proper. It refracts what renders behind it in the
+                    // window, which is the backing's live image of whatever sits behind
+                    // the panel, so the lensing and specular are the system's own.
+                    if mode != .solid {
+                        // Regular, not clear: with clear glass the app behind the notch
+                        // stayed legible and read as panel content (a Spotify window
+                        // through the panel looked like a phantom music pane). Regular
+                        // frost keeps the background as texture while the surface still
+                        // carries no colour of its own.
+                        shape.fill(.clear)
+                            .glassEffect(.regular, in: shape)
+                            .opacity(isExpanded ? 1 : 0)
+                    }
                     if mode == .gradient {
                         shape.fill(
                             LinearGradient(
@@ -181,18 +198,21 @@ public struct NotchMaterial: ViewModifier {
                     shape.fill(Style.ink.opacity(isExpanded ? 0.03 : 0))
                 }
                 .overlay {
-                    // Specular top edge, the tell that makes glass read as glass. The
-                    // solid mode keeps a quieter version so the panel still has an edge.
-                    shape.stroke(
-                        LinearGradient(
-                            colors: [
-                                Style.ink.opacity(isExpanded ? (mode == .solid ? 0.14 : 0.24) : 0),
-                                Style.ink.opacity(isExpanded ? 0.06 : 0),
-                            ],
-                            startPoint: .top, endPoint: .bottom
-                        ),
-                        lineWidth: 0.8
-                    )
+                    // Hand-drawn specular edge for the solid mode only. The glass modes
+                    // get the system's own edge treatment from glassEffect; doubling it
+                    // read as a fake transparent border.
+                    if mode == .solid {
+                        shape.stroke(
+                            LinearGradient(
+                                colors: [
+                                    Style.ink.opacity(isExpanded ? 0.14 : 0),
+                                    Style.ink.opacity(isExpanded ? 0.06 : 0),
+                                ],
+                                startPoint: .top, endPoint: .bottom
+                            ),
+                            lineWidth: 0.8
+                        )
+                    }
                 }
                 .compositingGroup()
                 .shadow(

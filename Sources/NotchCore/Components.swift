@@ -194,6 +194,8 @@ public struct NotchRing: View {
     }
 
     public var body: some View {
+        // The stroke straddles the path, so without this inset half the line width
+        // hangs outside the frame and whatever contains the ring shaves its top.
         ZStack {
             Circle().stroke(Style.ink.opacity(0.16), lineWidth: lineWidth)
             Circle()
@@ -201,6 +203,7 @@ public struct NotchRing: View {
                 .stroke(tint, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                 .rotationEffect(.degrees(-90))
         }
+        .padding(lineWidth / 2)
         .frame(width: size, height: size)
         .notchAnimation(Motion.ambient, value: value)
     }

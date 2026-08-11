@@ -52,10 +52,9 @@ struct ExpandedView: View {
                 id: NotchTravelID.artwork.rawValue, in: namespace, isSource: true
             )
             .padding(.leading, Metrics.paneInset)
-            .padding(
-                .top,
-                paneTop + max((musicContentHeight - ShellMetrics.expandedArtwork) / 2, 0)
-            )
+            // The pane top-aligns the tile with the title, so the anchor sits at the
+            // band's top with no centering term.
+            .padding(.top, paneTop)
             .allowsHitTesting(false)
     }
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.1](https://github.com/techuila/top-notch/compare/v0.4.0...v0.4.1) (2026-08-11)
+
+
+### Bug Fixes
+
+* **core:** silhouette in core, material dresses flares, glass scrim ([a3f3c6b](https://github.com/techuila/top-notch/commit/a3f3c6bb09c26ce5f2ca40e92c01c0caeb137b7e))
+* **music:** apple events shuffle and repeat, artwork tops the title ([0c0ef2b](https://github.com/techuila/top-notch/commit/0c0ef2be82e85169a23358998cda428e4ff2b1e0))
+* **shell:** behind window glass backing and morphing flares ([259a779](https://github.com/techuila/top-notch/commit/259a77952c418da46c26f38f0c4119fd0f13e1b2))
+
 ## [0.4.0](https://github.com/techuila/top-notch/compare/v0.3.1...v0.4.0) (2026-08-10)
 
 

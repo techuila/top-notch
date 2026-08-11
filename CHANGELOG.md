@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.3](https://github.com/techuila/top-notch/compare/v0.4.2...v0.4.3) (2026-08-11)
+
+
+### Bug Fixes
+
+* **shell:** travelling art and waveform, border line laid out directly ([0aa4cce](https://github.com/techuila/top-notch/commit/0aa4ccec6e3c90eb2b59f88a37d897d21d83b011))
+
 ## [0.4.2](https://github.com/techuila/top-notch/compare/v0.4.1...v0.4.2) (2026-08-11)
 
 

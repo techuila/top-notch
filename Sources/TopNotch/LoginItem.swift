@@ -20,6 +20,13 @@ enum LoginItem {
 
     private static var service: SMAppService { .mainApp }
 
+    /// True only when the process is a real `.app` bundle. `swift run` and the bare
+    /// binary under `.build` have no bundle, so `SMAppService.mainApp` would register the
+    /// executable file itself. launchd opens a bare executable through Terminal at login,
+    /// and macOS then refuses to unregister that entry. A bare binary never touches the
+    /// registration; the user removes any such leftover in System Settings.
+    private static var isBundled: Bool { Bundle.main.bundleURL.pathExtension == "app" }
+
     static var isEnabled: Bool { service.status == .enabled }
 
     /// True when macOS has the registration but the user has not approved it yet. The menu
@@ -28,13 +35,15 @@ enum LoginItem {
 
     /// Registers on the very first launch and never again.
     static func applyDefaultOnFirstLaunch(defaults: UserDefaults = .standard) {
-        guard !defaults.bool(forKey: configuredKey) else { return }
+        // Not marked configured either, so the bundled app still gets its default later.
+        guard isBundled, !defaults.bool(forKey: configuredKey) else { return }
         defaults.set(true, forKey: configuredKey)
         setEnabled(true)
     }
 
     @discardableResult
     static func setEnabled(_ enabled: Bool) -> Bool {
+        guard isBundled else { return false }
         do {
             switch (enabled, service.status) {
             case (true, .enabled), (false, .notRegistered), (false, .notFound):

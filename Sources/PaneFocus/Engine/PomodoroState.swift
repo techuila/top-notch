@@ -23,8 +23,8 @@ public struct FocusCompletion: Equatable, Sendable {
     public let finishedAt: Date
     /// The phase that came next.
     public let next: FocusPhase
-    /// Work sessions completed in the cycle after this boundary.
-    public let completedInCycle: Int
+    /// Focus rounds finished on the day of this boundary, after it.
+    public let roundsToday: Int
     /// Whether the next phase started by itself.
     public let autoStarted: Bool
 }
@@ -36,20 +36,27 @@ public struct FocusCompletion: Equatable, Sendable {
 public struct PomodoroState: Equatable, Sendable, Codable {
     public var settings: FocusSettings
     public var phase: FocusPhase
-    /// Work sessions completed so far in the current cycle, `0 ..< settings.sessionsPerCycle`.
-    public var completedInCycle: Int
     public var run: FocusRunState
+
+    /// Focus rounds finished on `roundsDay`. A round is finished when its deadline
+    /// passes; a skipped one was not worked and does not count. The number only ever
+    /// grows within a day, and the day is the only thing that resets it.
+    public private(set) var roundsToday: Int
+    /// The start of the day `roundsToday` belongs to.
+    public private(set) var roundsDay: Date?
 
     public init(
         settings: FocusSettings = .default,
         phase: FocusPhase = .work,
-        completedInCycle: Int = 0,
-        run: FocusRunState = .idle
+        run: FocusRunState = .idle,
+        roundsToday: Int = 0,
+        roundsDay: Date? = nil
     ) {
         self.settings = settings
         self.phase = phase
-        self.completedInCycle = completedInCycle
         self.run = run
+        self.roundsToday = max(roundsToday, 0)
+        self.roundsDay = roundsDay
     }
 
     // MARK: Derived
@@ -106,12 +113,11 @@ public struct PomodoroState: Equatable, Sendable, Codable {
         return false
     }
 
-    /// 1-based index of the work session this phase belongs to. A break reports the
-    /// session it follows, so "Session 2 of 4" keeps meaning the same session either side
-    /// of the boundary.
-    public var sessionIndex: Int {
-        let raw = phase == .work ? completedInCycle + 1 : completedInCycle
-        return min(max(raw, 1), settings.sessionsPerCycle)
+    /// Focus rounds finished today, where today is the day `now` falls on. Yesterday's
+    /// count is not carried over, so the first look of the morning says zero.
+    public func rounds(at now: Date, calendar: Calendar = .current) -> Int {
+        guard let roundsDay, calendar.isDate(roundsDay, inSameDayAs: now) else { return 0 }
+        return roundsToday
     }
 
     // MARK: Transport
@@ -137,19 +143,19 @@ public struct PomodoroState: Equatable, Sendable, Codable {
     }
 
     /// Puts the current phase back to its full duration and stops it.
-    /// The cycle count is untouched: restarting a session does not erase the ones before it.
+    /// The round count is untouched: restarting a round does not erase the ones before it.
     public mutating func reset() {
         run = .idle
     }
 
     /// Abandons the current phase and moves to the next one.
     ///
-    /// A skipped work session earns no credit toward the long break, because it was not
-    /// worked. The next phase starts by itself only if the skipped one was running and
-    /// auto-advance is on, so skipping never surprises a stopped timer into running.
+    /// A skipped focus round is not counted, because it was not worked. The next phase
+    /// starts by itself only if the skipped one was running and auto-advance is on, so
+    /// skipping never surprises a stopped timer into running.
     public mutating func skip(at now: Date) {
         let wasRunning = isRunning
-        advancePhase(creditWork: false)
+        phase = nextPhase()
         if wasRunning && settings.autoAdvance {
             run = .running(deadline: now.addingTimeInterval(phaseDuration))
         } else {
@@ -166,12 +172,15 @@ public struct PomodoroState: Equatable, Sendable, Codable {
     /// 25 minute timer after two hours asleep applies the boundary and reports it, rather
     /// than pretending there are 23 minutes left.
     @discardableResult
-    public mutating func catchUp(at now: Date, limit: Int = 64) -> [FocusCompletion] {
+    public mutating func catchUp(at now: Date, limit: Int = 64, calendar: Calendar = .current) -> [FocusCompletion] {
         var events: [FocusCompletion] = []
 
         while case .running(let deadline) = run, deadline <= now, events.count < limit {
             let finished = phase
-            advancePhase(creditWork: true)
+            if finished == .work {
+                credit(on: deadline, calendar: calendar)
+            }
+            phase = nextPhase()
 
             if settings.autoAdvance {
                 // Chained from the deadline, not from `now`, so a chain of auto-advanced
@@ -186,7 +195,7 @@ public struct PomodoroState: Equatable, Sendable, Codable {
                     finished: finished,
                     finishedAt: deadline,
                     next: phase,
-                    completedInCycle: completedInCycle,
+                    roundsToday: rounds(at: deadline, calendar: calendar),
                     autoStarted: settings.autoAdvance
                 )
             )
@@ -210,28 +219,46 @@ public struct PomodoroState: Equatable, Sendable, Codable {
     }
 
     /// The phase that follows `phase`, without mutating anything.
-    public func nextPhase(creditWork: Bool = true) -> FocusPhase {
-        switch phase {
-        case .work:
-            let credited = creditWork ? completedInCycle + 1 : completedInCycle
-            return credited >= settings.sessionsPerCycle ? .longBreak : .shortBreak
-        case .shortBreak, .longBreak:
-            return .work
-        }
+    public func nextPhase() -> FocusPhase {
+        phase == .work ? .rest : .work
     }
 
-    private mutating func advancePhase(creditWork: Bool) {
-        switch phase {
-        case .work:
-            if creditWork {
-                completedInCycle = min(completedInCycle + 1, settings.sessionsPerCycle)
-            }
-            phase = completedInCycle >= settings.sessionsPerCycle ? .longBreak : .shortBreak
-        case .shortBreak:
-            phase = .work
-        case .longBreak:
-            completedInCycle = 0
-            phase = .work
+    /// One more round on the day `instant` falls on. A new day starts the count over.
+    private mutating func credit(on instant: Date, calendar: Calendar) {
+        let day = calendar.startOfDay(for: instant)
+        if roundsDay != day {
+            roundsDay = day
+            roundsToday = 0
         }
+        roundsToday += 1
+    }
+
+    // MARK: Codable
+
+    // Field by field, so state saved by the cycle-era build (which had a session count
+    // and no rounds) still restores its phase, run and settings instead of being thrown
+    // away.
+    private enum CodingKeys: String, CodingKey {
+        case settings, phase, run, roundsToday, roundsDay
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let box = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            settings: try box.decodeIfPresent(FocusSettings.self, forKey: .settings) ?? .default,
+            phase: try box.decodeIfPresent(FocusPhase.self, forKey: .phase) ?? .work,
+            run: try box.decodeIfPresent(FocusRunState.self, forKey: .run) ?? .idle,
+            roundsToday: try box.decodeIfPresent(Int.self, forKey: .roundsToday) ?? 0,
+            roundsDay: try box.decodeIfPresent(Date.self, forKey: .roundsDay)
+        )
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var box = encoder.container(keyedBy: CodingKeys.self)
+        try box.encode(settings, forKey: .settings)
+        try box.encode(phase, forKey: .phase)
+        try box.encode(run, forKey: .run)
+        try box.encode(roundsToday, forKey: .roundsToday)
+        try box.encodeIfPresent(roundsDay, forKey: .roundsDay)
     }
 }

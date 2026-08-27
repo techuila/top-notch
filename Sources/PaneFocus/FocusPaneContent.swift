@@ -22,7 +22,7 @@ struct FocusPaneContent: View {
         VStack(spacing: FocusLayout.stackSpacing) {
             HStack(spacing: FocusLayout.columnSpacing) {
                 dial(at: instant)
-                details
+                details(at: instant)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -32,6 +32,17 @@ struct FocusPaneContent: View {
     }
 
     // MARK: Dial
+
+    /// Focus rounds finished since midnight. A plain count that only ever grows; the
+    /// day is the only thing that resets it.
+    private func roundsLabel(at instant: Date) -> String {
+        let rounds = pane.state.rounds(at: instant)
+        switch rounds {
+        case 0:  return "No rounds done today"
+        case 1:  return "1 round done today"
+        default: return "\(rounds) rounds done today"
+        }
+    }
 
     private func dial(at instant: Date) -> some View {
         let remaining = pane.state.remaining(at: instant)
@@ -74,18 +85,16 @@ struct FocusPaneContent: View {
 
     // MARK: Details
 
-    private var details: some View {
+    private func details(at instant: Date) -> some View {
         VStack(alignment: .leading, spacing: FocusLayout.detailSpacing) {
-            HStack(spacing: FocusLayout.dotSpacing * 2) {
-                Text(pane.state.phase.title)
-                    .font(Style.title)
-                    .foregroundStyle(Style.ink)
-                    .notchAnimation(Motion.content, value: pane.state.phase)
+            Text(pane.state.phase.title)
+                .font(Style.title)
+                .foregroundStyle(Style.ink)
+                .notchAnimation(Motion.content, value: pane.state.phase)
 
-                SessionDots(state: pane.state)
-            }
-
-            NotchLabel("Session \(pane.state.sessionIndex) of \(pane.state.settings.sessionsPerCycle)")
+            NotchLabel(roundsLabel(at: instant))
+                .contentTransition(.numericText())
+                .notchAnimation(Motion.tap, value: pane.state.rounds(at: instant))
 
             HStack(spacing: FocusLayout.controlSpacing) {
                 NotchButton(pane.state.isRunning ? "pause.fill" : "play.fill", size: FocusLayout.primaryControl) {
@@ -94,56 +103,21 @@ struct FocusPaneContent: View {
                 .accessibilityLabel(pane.state.isRunning ? "Pause" : "Start")
 
                 NotchButton("forward.end.fill", size: FocusLayout.secondaryControl) { pane.skip() }
-                    .accessibilityLabel("Skip phase")
+                    .accessibilityLabel("Skip to \(pane.state.nextPhase().title.lowercased())")
 
                 NotchButton("arrow.counterclockwise", size: FocusLayout.secondaryControl) { pane.reset() }
-                    .accessibilityLabel("Reset phase")
+                    .accessibilityLabel("Reset \(pane.state.phase.title.lowercased())")
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
-// MARK: - Session dots
-
-/// Completed, current and upcoming sessions in the cycle. The current one is a pill; when
-/// it completes the pill narrows into a dot and the next one widens, so the row moves
-/// rather than redrawing.
-private struct SessionDots: View {
-    let state: PomodoroState
-
-    var body: some View {
-        HStack(spacing: FocusLayout.dotSpacing) {
-            ForEach(0..<state.settings.sessionsPerCycle, id: \.self) { index in
-                Capsule()
-                    .fill(fill(for: index))
-                    .frame(width: width(for: index), height: FocusLayout.dotSize)
-            }
-        }
-        .notchAnimation(Motion.content, value: state.completedInCycle)
-        .notchAnimation(Motion.content, value: state.phase)
-        .accessibilityLabel("\(state.completedInCycle) of \(state.settings.sessionsPerCycle) sessions complete")
-    }
-
-    private var currentIndex: Int? {
-        state.phase == .work ? min(state.completedInCycle, state.settings.sessionsPerCycle - 1) : nil
-    }
-
-    private func fill(for index: Int) -> Color {
-        if index < state.completedInCycle { return Style.focusAccent }
-        if index == currentIndex { return Style.focusAccent.opacity(0.75) }
-        return Style.hairline
-    }
-
-    private func width(for index: Int) -> CGFloat {
-        index == currentIndex ? FocusLayout.dotSize * 2.6 : FocusLayout.dotSize
-    }
-}
-
 // MARK: - Durations
 
-/// Durations and auto-advance, in the pane. There is no settings window to open, because
-/// leaving the notch to change 25 into 30 would be absurd.
+/// Durations and auto-start, in the pane. There is no settings window to open, because
+/// leaving the notch to change 25 into 30 would be absurd. Each control says what it is
+/// in words: an unlabelled icon here was the owner's first question.
 private struct DurationBar: View {
     let pane: FocusPane
 
@@ -167,13 +141,16 @@ private struct DurationStepper: View {
     var body: some View {
         NotchTile(interactive: false) {
             HStack(spacing: FocusLayout.stepperSpacing) {
-                Image(systemName: phase.symbol)
-                    .font(Style.numeric)
+                Text(phase.title)
+                    .font(Style.label)
+                    .tracking(1.2)
+                    .textCase(.uppercase)
                     .foregroundStyle(phase == pane.state.phase ? Style.focusAccent : Style.inkFaint)
+                    .padding(.trailing, FocusLayout.stepperSpacing)
                     .notchAnimation(Motion.content, value: pane.state.phase)
 
                 NotchButton("minus", size: FocusLayout.stepperControl) { pane.adjust(phase, by: -1) }
-                    .accessibilityLabel("Shorten \(phase.shortTitle)")
+                    .accessibilityLabel("Shorten \(phase.title)")
 
                 Text("\(pane.state.settings.minutes(for: phase))")
                     .font(Style.numeric)
@@ -183,11 +160,11 @@ private struct DurationStepper: View {
                     .notchAnimation(Motion.tap, value: pane.state.settings.minutes(for: phase))
 
                 NotchButton("plus", size: FocusLayout.stepperControl) { pane.adjust(phase, by: 1) }
-                    .accessibilityLabel("Lengthen \(phase.shortTitle)")
+                    .accessibilityLabel("Lengthen \(phase.title)")
             }
         }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("\(phase.shortTitle) minutes")
+        .accessibilityLabel("\(phase.title) minutes")
     }
 }
 
@@ -204,13 +181,13 @@ private struct AutoAdvanceChip: View {
                     .frame(width: FocusLayout.dotSize, height: FocusLayout.dotSize)
                     .scaleEffect(isOn ? 1 : FocusLayout.restingDotScale)
 
-                NotchLabel("Auto")
+                NotchLabel("Auto-start next")
             }
         }
         .contentShape(Rectangle())
         .onTapGesture { pane.setAutoAdvance(!isOn) }
         .notchAnimation(Motion.tap, value: isOn)
-        .accessibilityLabel("Auto advance")
+        .accessibilityLabel("Start the next phase automatically")
         .accessibilityValue(isOn ? "On" : "Off")
         .accessibilityAddTraits(.isButton)
     }
@@ -281,7 +258,6 @@ private enum FocusLayout {
     static let stepperSpacing: CGFloat = 3
 
     static let dotSize: CGFloat = 6
-    static let dotSpacing: CGFloat = 4
     static let restingDotScale: Double = 0.7
 
     static let primaryControl: CGFloat = 17

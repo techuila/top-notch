@@ -1,37 +1,28 @@
 import Foundation
 
-/// The three phases of a classic pomodoro cycle.
+/// The two phases. Focus, then a break, then focus again.
+///
+/// There is no long break and no cycle of four (owner decision, 2026-08-27): both were
+/// controls that needed explaining on a pane with no room to explain them.
 public enum FocusPhase: String, Codable, Sendable, CaseIterable {
     case work
-    case shortBreak
-    case longBreak
+    case rest = "break"
 
     public var title: String {
         switch self {
-        case .work:       "Focus"
-        case .shortBreak: "Short break"
-        case .longBreak:  "Long break"
+        case .work: "Focus"
+        case .rest: "Break"
         }
     }
 
-    /// Short form used where the full title will not fit, such as the duration steppers.
-    public var shortTitle: String {
-        switch self {
-        case .work:       "Focus"
-        case .shortBreak: "Short"
-        case .longBreak:  "Long"
-        }
-    }
+    public var isBreak: Bool { self == .work ? false : true }
 
-    public var symbol: String {
-        switch self {
-        case .work:       "brain.head.profile"
-        case .shortBreak: "cup.and.saucer"
-        case .longBreak:  "moon.zzz"
-        }
+    /// State saved by the cycle-era build named its breaks "shortBreak" and "longBreak".
+    /// Either is a break now.
+    public init(from decoder: any Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = FocusPhase(rawValue: raw) ?? .rest
     }
-
-    public var isBreak: Bool { self != .work }
 }
 
 /// User-tunable pomodoro configuration.
@@ -40,11 +31,7 @@ public enum FocusPhase: String, Codable, Sendable, CaseIterable {
 /// offers to edit them at, and it keeps persisted state readable.
 public struct FocusSettings: Codable, Equatable, Sendable {
     public var workMinutes: Int
-    public var shortBreakMinutes: Int
-    public var longBreakMinutes: Int
-
-    /// Work sessions completed before a long break is offered.
-    public var sessionsPerCycle: Int
+    public var breakMinutes: Int
 
     /// Whether a finished phase starts the next one on its own.
     ///
@@ -56,15 +43,11 @@ public struct FocusSettings: Codable, Equatable, Sendable {
 
     public init(
         workMinutes: Int = 25,
-        shortBreakMinutes: Int = 5,
-        longBreakMinutes: Int = 15,
-        sessionsPerCycle: Int = 4,
+        breakMinutes: Int = 5,
         autoAdvance: Bool = false
     ) {
         self.workMinutes = Self.clamp(workMinutes, to: Self.range(for: .work))
-        self.shortBreakMinutes = Self.clamp(shortBreakMinutes, to: Self.range(for: .shortBreak))
-        self.longBreakMinutes = Self.clamp(longBreakMinutes, to: Self.range(for: .longBreak))
-        self.sessionsPerCycle = max(1, sessionsPerCycle)
+        self.breakMinutes = Self.clamp(breakMinutes, to: Self.range(for: .rest))
         self.autoAdvance = autoAdvance
     }
 
@@ -76,9 +59,8 @@ public struct FocusSettings: Codable, Equatable, Sendable {
 
     public func minutes(for phase: FocusPhase) -> Int {
         switch phase {
-        case .work:       workMinutes
-        case .shortBreak: shortBreakMinutes
-        case .longBreak:  longBreakMinutes
+        case .work: workMinutes
+        case .rest: breakMinutes
         }
     }
 
@@ -89,9 +71,8 @@ public struct FocusSettings: Codable, Equatable, Sendable {
     public mutating func setMinutes(_ value: Int, for phase: FocusPhase) {
         let clamped = Self.clamp(value, to: Self.range(for: phase))
         switch phase {
-        case .work:       workMinutes = clamped
-        case .shortBreak: shortBreakMinutes = clamped
-        case .longBreak:  longBreakMinutes = clamped
+        case .work: workMinutes = clamped
+        case .rest: breakMinutes = clamped
         }
     }
 
@@ -112,18 +93,25 @@ public struct FocusSettings: Codable, Equatable, Sendable {
 
     // Decoded field by field so that state written by an older build, or state that has
     // been hand-edited into nonsense, still restores instead of throwing the session away.
+    // The cycle-era build wrote `shortBreakMinutes`; that becomes the break.
     private enum CodingKeys: String, CodingKey {
-        case workMinutes, shortBreakMinutes, longBreakMinutes, sessionsPerCycle, autoAdvance
+        case workMinutes, breakMinutes, shortBreakMinutes, autoAdvance
     }
 
     public init(from decoder: any Decoder) throws {
         let box = try decoder.container(keyedBy: CodingKeys.self)
         self.init(
             workMinutes: try box.decodeIfPresent(Int.self, forKey: .workMinutes) ?? 25,
-            shortBreakMinutes: try box.decodeIfPresent(Int.self, forKey: .shortBreakMinutes) ?? 5,
-            longBreakMinutes: try box.decodeIfPresent(Int.self, forKey: .longBreakMinutes) ?? 15,
-            sessionsPerCycle: try box.decodeIfPresent(Int.self, forKey: .sessionsPerCycle) ?? 4,
+            breakMinutes: try box.decodeIfPresent(Int.self, forKey: .breakMinutes)
+                ?? box.decodeIfPresent(Int.self, forKey: .shortBreakMinutes) ?? 5,
             autoAdvance: try box.decodeIfPresent(Bool.self, forKey: .autoAdvance) ?? false
         )
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var box = encoder.container(keyedBy: CodingKeys.self)
+        try box.encode(workMinutes, forKey: .workMinutes)
+        try box.encode(breakMinutes, forKey: .breakMinutes)
+        try box.encode(autoAdvance, forKey: .autoAdvance)
     }
 }

@@ -1,5 +1,6 @@
 import AppKit
 import NotchCore
+import PaneFocus
 import Sparkle
 
 /// The status item, and the only chrome TopNotch has outside the notch itself.
@@ -22,6 +23,8 @@ final class MenuBarItem: NSObject, NSMenuDelegate {
     private let launchItem = NSMenuItem()
     private let appearanceItem = NSMenuItem()
     private let appearanceMenu = NSMenu()
+    private let soundsItem = NSMenuItem()
+    private let hapticsItem = NSMenuItem()
     private let updateItem = NSMenuItem()
     private let quitItem = NSMenuItem()
 
@@ -66,6 +69,14 @@ final class MenuBarItem: NSObject, NSMenuDelegate {
         launchItem.target = self
         launchItem.action = #selector(toggleLaunchAtLogin)
 
+        soundsItem.title = "Focus Sounds"
+        soundsItem.target = self
+        soundsItem.action = #selector(toggleSounds)
+
+        hapticsItem.title = "Haptics"
+        hapticsItem.target = self
+        hapticsItem.action = #selector(toggleHaptics)
+
         quitItem.title = "Quit TopNotch"
         quitItem.keyEquivalent = "q"
         quitItem.target = self
@@ -78,6 +89,8 @@ final class MenuBarItem: NSObject, NSMenuDelegate {
         menu.addItem(.separator())
         menu.addItem(launchItem)
         menu.addItem(appearanceItem)
+        menu.addItem(soundsItem)
+        menu.addItem(hapticsItem)
         menu.addItem(updateItem)
         menu.addItem(.separator())
         menu.addItem(quitItem)
@@ -87,6 +100,8 @@ final class MenuBarItem: NSObject, NSMenuDelegate {
     // MARK: NSMenuDelegate
 
     func menuNeedsUpdate(_ menu: NSMenu) {
+        soundsItem.state = FocusSounds.isEnabled ? .on : .off
+        hapticsItem.state = NotchHaptics.isEnabled ? .on : .off
         for item in appearanceMenu.items {
             item.state =
                 (item.representedObject as? String) == Appearance.shared.material.rawValue
@@ -116,6 +131,14 @@ final class MenuBarItem: NSObject, NSMenuDelegate {
         } else {
             LoginItem.toggle()
         }
+    }
+
+    @objc private func toggleHaptics() {
+        NotchHaptics.isEnabled.toggle()
+    }
+
+    @objc private func toggleSounds() {
+        FocusSounds.isEnabled.toggle()
     }
 
     @objc private func pickAppearance(_ sender: NSMenuItem) {

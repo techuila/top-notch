@@ -10,26 +10,21 @@ import XCTest
 
 private let t0 = Date(timeIntervalSinceReferenceDate: 1_000_000)
 private let minute: TimeInterval = 60
+private let utc: Calendar = {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: "UTC")!
+    return calendar
+}()
 
 private func state(
     work: Int = 25,
-    short: Int = 5,
-    long: Int = 15,
-    sessions: Int = 4,
+    rest: Int = 5,
     autoAdvance: Bool = false,
-    phase: FocusPhase = .work,
-    completed: Int = 0
+    phase: FocusPhase = .work
 ) -> PomodoroState {
     PomodoroState(
-        settings: FocusSettings(
-            workMinutes: work,
-            shortBreakMinutes: short,
-            longBreakMinutes: long,
-            sessionsPerCycle: sessions,
-            autoAdvance: autoAdvance
-        ),
-        phase: phase,
-        completedInCycle: completed
+        settings: FocusSettings(workMinutes: work, breakMinutes: rest, autoAdvance: autoAdvance),
+        phase: phase
     )
 }
 
@@ -152,50 +147,60 @@ final class PomodoroSpanTests: XCTestCase {
 
 final class PomodoroBoundaryTests: XCTestCase {
 
-    func testCrossingTheDeadlineCreditsTheSessionAndMovesToABreak() {
+    func testCrossingTheDeadlineCountsTheRoundAndMovesToABreak() {
         var s = state()
         s.start(at: t0)
-        let events = s.catchUp(at: t0 + 25 * minute)
+        let events = s.catchUp(at: t0 + 25 * minute, calendar: utc)
 
         XCTAssertEqual(events.count, 1)
         XCTAssertEqual(events.first?.finished, .work)
-        XCTAssertEqual(events.first?.next, .shortBreak)
-        XCTAssertEqual(s.phase, .shortBreak)
-        XCTAssertEqual(s.completedInCycle, 1)
+        XCTAssertEqual(events.first?.next, .rest)
+        XCTAssertEqual(events.first?.roundsToday, 1)
+        XCTAssertEqual(s.phase, .rest)
+        XCTAssertEqual(s.rounds(at: t0 + 25 * minute, calendar: utc), 1)
+    }
+
+    func testFinishingABreakCountsNothing() {
+        var s = state(phase: .rest)
+        s.start(at: t0)
+        s.catchUp(at: t0 + 5 * minute, calendar: utc)
+        XCTAssertEqual(s.phase, .work)
+        XCTAssertEqual(s.rounds(at: t0 + 5 * minute, calendar: utc), 0)
     }
 
     func testCompletionReportsWhenItActuallyFinishedNotWhenItWasNoticed() {
         var s = state()
         s.start(at: t0)
         // The lid was shut; we only look two hours later.
-        let events = s.catchUp(at: t0 + 120 * minute)
+        let events = s.catchUp(at: t0 + 120 * minute, calendar: utc)
         XCTAssertEqual(events.first?.finishedAt, t0 + 25 * minute)
     }
 
     func testWithoutAutoAdvanceOneBoundaryIsAppliedAndItStops() {
         var s = state()
         s.start(at: t0)
-        let events = s.catchUp(at: t0 + 120 * minute)
+        let events = s.catchUp(at: t0 + 120 * minute, calendar: utc)
         XCTAssertEqual(events.count, 1)
         XCTAssertEqual(s.run, .idle)
     }
 
     func testAutoAdvanceChainsFromTheDeadlineNotFromNow() {
-        var s = state(work: 25, short: 5, autoAdvance: true)
+        var s = state(work: 25, rest: 5, autoAdvance: true)
         s.start(at: t0)
 
         // 25 work, then 5 break, then 25 work: boundaries at 25, 30 and 55 minutes.
         // Chaining from `now` instead of from each deadline would drag every one of these
         // later by however long the app went unwatched.
-        let events = s.catchUp(at: t0 + 58 * minute)
+        let events = s.catchUp(at: t0 + 58 * minute, calendar: utc)
 
         XCTAssertEqual(events.map(\.finishedAt), [
             t0 + 25 * minute,
             t0 + 30 * minute,
             t0 + 55 * minute,
         ])
-        XCTAssertEqual(s.phase, .shortBreak)
+        XCTAssertEqual(s.phase, .rest)
         XCTAssertEqual(s.remaining(at: t0 + 58 * minute), 2 * minute)
+        XCTAssertEqual(s.rounds(at: t0 + 58 * minute, calendar: utc), 2)
     }
 
     /// The boundary is `deadline <= now`, so a phase ending on the exact instant it is
@@ -203,29 +208,13 @@ final class PomodoroBoundaryTests: XCTestCase {
     func testABoundaryLandingOnTheSampledInstantIsCrossed() {
         var s = state()
         s.start(at: t0)
-        XCTAssertEqual(s.catchUp(at: t0 + 25 * minute).count, 1)
-    }
-
-    func testTheLongBreakArrivesOnTheLastSessionOfTheCycle() {
-        var s = state(sessions: 2, autoAdvance: false, completed: 1)
-        s.start(at: t0)
-        s.catchUp(at: t0 + 25 * minute)
-        XCTAssertEqual(s.phase, .longBreak)
-        XCTAssertEqual(s.completedInCycle, 2)
-    }
-
-    func testFinishingTheLongBreakResetsTheCycle() {
-        var s = state(sessions: 2, phase: .longBreak, completed: 2)
-        s.start(at: t0)
-        s.catchUp(at: t0 + 15 * minute)
-        XCTAssertEqual(s.phase, .work)
-        XCTAssertEqual(s.completedInCycle, 0)
+        XCTAssertEqual(s.catchUp(at: t0 + 25 * minute, calendar: utc).count, 1)
     }
 
     func testCatchUpIsBoundedRatherThanLoopingForever() {
-        var s = state(work: 1, short: 1, autoAdvance: true)
+        var s = state(work: 1, rest: 1, autoAdvance: true)
         s.start(at: t0)
-        let events = s.catchUp(at: t0 + 10_000 * minute, limit: 8)
+        let events = s.catchUp(at: t0 + 10_000 * minute, limit: 8, calendar: utc)
         XCTAssertEqual(events.count, 8)
         XCTAssertEqual(s.run, .idle, "left stopped rather than holding a deadline in the past")
     }
@@ -234,8 +223,48 @@ final class PomodoroBoundaryTests: XCTestCase {
         var s = state()
         s.start(at: t0)
         s.pause(at: t0 + minute)
-        XCTAssertTrue(s.catchUp(at: t0 + 500 * minute).isEmpty)
+        XCTAssertTrue(s.catchUp(at: t0 + 500 * minute, calendar: utc).isEmpty)
         XCTAssertEqual(s.phase, .work)
+    }
+}
+
+// MARK: - Rounds
+
+final class PomodoroRoundTests: XCTestCase {
+
+    private func finishRounds(_ count: Int, from start: Date, into s: inout PomodoroState) {
+        var now = start
+        for _ in 0..<count {
+            s.phase = .work
+            s.start(at: now)
+            now += 25 * minute
+            s.catchUp(at: now, calendar: utc)
+        }
+    }
+
+    func testRoundsAccumulateThroughTheDay() {
+        var s = state()
+        finishRounds(3, from: t0, into: &s)
+        XCTAssertEqual(s.rounds(at: t0 + 4 * 60 * minute, calendar: utc), 3)
+    }
+
+    func testTheCountBelongsToTheDayTheRoundFinishedOn() {
+        var s = state()
+        finishRounds(2, from: t0, into: &s)
+        let tomorrow = utc.date(byAdding: .day, value: 1, to: t0)!
+        XCTAssertEqual(s.rounds(at: tomorrow, calendar: utc), 0, "yesterday's rounds are not today's")
+
+        finishRounds(1, from: tomorrow, into: &s)
+        XCTAssertEqual(s.rounds(at: tomorrow + 60 * minute, calendar: utc), 1, "a new day starts the count over")
+    }
+
+    func testARoundThatEndsAfterMidnightCountsForTheNewDay() {
+        let nearMidnight = utc.startOfDay(for: t0) + 24 * 60 * minute - 10 * minute
+        var s = state()
+        s.start(at: nearMidnight)
+        s.catchUp(at: nearMidnight + 25 * minute, calendar: utc)
+        XCTAssertEqual(s.rounds(at: nearMidnight + 25 * minute, calendar: utc), 1)
+        XCTAssertEqual(s.rounds(at: nearMidnight, calendar: utc), 0)
     }
 }
 
@@ -243,12 +272,18 @@ final class PomodoroBoundaryTests: XCTestCase {
 
 final class PomodoroTransportTests: XCTestCase {
 
-    func testSkippingAWorkSessionEarnsNoCredit() {
+    func testSkippingAFocusRoundDoesNotCountIt() {
         var s = state()
         s.start(at: t0)
         s.skip(at: t0 + minute)
-        XCTAssertEqual(s.phase, .shortBreak)
-        XCTAssertEqual(s.completedInCycle, 0, "it was skipped, not worked")
+        XCTAssertEqual(s.phase, .rest)
+        XCTAssertEqual(s.rounds(at: t0 + minute, calendar: utc), 0, "it was skipped, not worked")
+    }
+
+    func testSkippingABreakGoesBackToFocus() {
+        var s = state(phase: .rest)
+        s.skip(at: t0)
+        XCTAssertEqual(s.phase, .work)
     }
 
     func testSkippingAStoppedTimerDoesNotStartTheNextPhase() {
@@ -265,13 +300,16 @@ final class PomodoroTransportTests: XCTestCase {
         XCTAssertEqual(s.remaining(at: t0 + minute), 5 * minute)
     }
 
-    func testResetReturnsToFullDurationWithoutErasingTheCycle() {
-        var s = state(completed: 2)
+    func testResetReturnsToFullDurationWithoutErasingTheRounds() {
+        var s = state()
         s.start(at: t0)
+        s.catchUp(at: t0 + 25 * minute, calendar: utc)
+        s.phase = .work
+        s.start(at: t0 + 30 * minute)
         s.reset()
         XCTAssertEqual(s.run, .idle)
-        XCTAssertEqual(s.remaining(at: t0 + 10 * minute), 25 * minute)
-        XCTAssertEqual(s.completedInCycle, 2)
+        XCTAssertEqual(s.remaining(at: t0 + 40 * minute), 25 * minute)
+        XCTAssertEqual(s.rounds(at: t0 + 40 * minute, calendar: utc), 1)
     }
 
     func testToggleStartsThenPauses() {
@@ -292,15 +330,6 @@ final class PomodoroTransportTests: XCTestCase {
         XCTAssertTrue(s.isActive, "a held session still owns the permanent idle slot")
         s.reset()
         XCTAssertFalse(s.isActive)
-    }
-
-    func testSessionIndexKeepsMeaningTheSameSessionAcrossABoundary() {
-        var s = state(sessions: 4)
-        XCTAssertEqual(s.sessionIndex, 1)
-        s.start(at: t0)
-        s.catchUp(at: t0 + 25 * minute)
-        XCTAssertEqual(s.phase, .shortBreak)
-        XCTAssertEqual(s.sessionIndex, 1, "the break follows session 1, it is not session 2")
     }
 }
 
@@ -334,10 +363,9 @@ final class PomodoroClockTests: XCTestCase {
 final class FocusSettingsTests: XCTestCase {
 
     func testDurationsAreClampedToTheirAllowedRange() {
-        let s = FocusSettings(workMinutes: 500, shortBreakMinutes: 0, longBreakMinutes: -4)
+        let s = FocusSettings(workMinutes: 500, breakMinutes: 0)
         XCTAssertEqual(s.workMinutes, 90)
-        XCTAssertEqual(s.shortBreakMinutes, 1)
-        XCTAssertEqual(s.longBreakMinutes, 1)
+        XCTAssertEqual(s.breakMinutes, 1)
     }
 
     func testAdjustStopsAtTheEdgeRatherThanWrapping() {
@@ -348,30 +376,44 @@ final class FocusSettingsTests: XCTestCase {
         XCTAssertTrue(s.canAdjust(.work, by: -1))
     }
 
-    func testSessionsPerCycleIsAtLeastOne() {
-        XCTAssertEqual(FocusSettings(sessionsPerCycle: 0).sessionsPerCycle, 1)
-    }
-
     func testStateWrittenByAnOlderBuildStillRestores() throws {
-        // Only two of the five fields present, as an earlier schema would have written it.
+        // Only two fields present, as an earlier schema would have written it.
         let json = Data(#"{"workMinutes":30,"autoAdvance":true}"#.utf8)
         let restored = try JSONDecoder().decode(FocusSettings.self, from: json)
         XCTAssertEqual(restored.workMinutes, 30)
         XCTAssertTrue(restored.autoAdvance)
-        XCTAssertEqual(restored.shortBreakMinutes, 5, "missing fields fall back to the defaults")
-        XCTAssertEqual(restored.sessionsPerCycle, 4)
+        XCTAssertEqual(restored.breakMinutes, 5, "missing fields fall back to the defaults")
+    }
+
+    func testTheCycleEraBreakBecomesTheBreak() throws {
+        let json = Data(#"{"workMinutes":25,"shortBreakMinutes":7,"longBreakMinutes":20,"sessionsPerCycle":4}"#.utf8)
+        let restored = try JSONDecoder().decode(FocusSettings.self, from: json)
+        XCTAssertEqual(restored.breakMinutes, 7)
+    }
+
+    func testACycleEraStateRestoresItsPhaseAndSettings() throws {
+        let json = Data(#"""
+        {"settings":{"workMinutes":30,"shortBreakMinutes":6,"longBreakMinutes":15,"sessionsPerCycle":4,"autoAdvance":false},
+         "phase":"longBreak","completedInCycle":4,"run":{"idle":{}}}
+        """#.utf8)
+        let restored = try JSONDecoder().decode(PomodoroState.self, from: json)
+        XCTAssertEqual(restored.phase, .rest, "a long break is a break")
+        XCTAssertEqual(restored.settings.workMinutes, 30)
+        XCTAssertEqual(restored.settings.breakMinutes, 6)
+        XCTAssertEqual(restored.rounds(at: t0, calendar: utc), 0)
     }
 
     func testNonsenseOnDiskIsClampedRatherThanThrown() throws {
-        let json = Data(#"{"workMinutes":100000,"sessionsPerCycle":-3}"#.utf8)
+        let json = Data(#"{"workMinutes":100000,"breakMinutes":-3}"#.utf8)
         let restored = try JSONDecoder().decode(FocusSettings.self, from: json)
         XCTAssertEqual(restored.workMinutes, 90)
-        XCTAssertEqual(restored.sessionsPerCycle, 1)
+        XCTAssertEqual(restored.breakMinutes, 1)
     }
 
     func testAStateRoundTripsThroughCoding() throws {
-        var s = state(work: 40, autoAdvance: true, completed: 2)
+        var s = state(work: 40, autoAdvance: true)
         s.start(at: t0)
+        s.catchUp(at: t0 + 40 * minute, calendar: utc)
         let restored = try JSONDecoder().decode(
             PomodoroState.self, from: JSONEncoder().encode(s)
         )

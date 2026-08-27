@@ -143,7 +143,13 @@ public final class FocusPane: NotchPane {
     public func toggle() {
         let instant = now()
         state.catchUp(at: instant)
+        let wasRunning = state.isRunning
         state.toggle(at: instant)
+        if !wasRunning, state.isRunning {
+            FocusSounds.play(starting: state.phase)
+        } else if wasRunning, state.isPaused {
+            FocusSounds.play(.pause)
+        }
         commit()
     }
 
@@ -186,6 +192,11 @@ public final class FocusPane: NotchPane {
         if let last = crossed.last {
             if instant.timeIntervalSince(last.finishedAt) <= Self.witnessWindow {
                 show(FocusFlourish(finished: last.finished, next: last.next))
+                // The notification carries the sound when it can. Without permission
+                // there is no alert, so the pane says it instead.
+                if !notifier.deliversSound {
+                    FocusSounds.play(starting: last.next)
+                }
             }
             store.save(state)
         }

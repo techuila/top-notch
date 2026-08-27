@@ -16,6 +16,10 @@ final class FocusNotifier {
 
     private let center: UNUserNotificationCenter?
     private var authorization: Bool?
+
+    /// True once the user has allowed notifications, which is when a boundary sound
+    /// travels inside the alert. Until then the pane plays it directly.
+    var deliversSound: Bool { authorization == true }
     /// Bumped on every schedule and cancel so an in-flight authorisation request cannot
     /// post an alert for a session the user has since paused.
     private var generation = 0
@@ -71,16 +75,18 @@ final class FocusNotifier {
         let content = UNMutableNotificationContent()
         switch finished {
         case .work:
-            content.title = "Session complete"
-            content.body = next == .longBreak ? "Take a long break." : "Take a short break."
-        case .shortBreak, .longBreak:
+            content.title = "Focus complete"
+            content.body = "Take a break."
+        case .rest:
             content.title = "Break over"
             content.body = "Back to focus."
         }
-        // The system sound, delivered through the notification, is the only way to make a
-        // noise that Do Not Disturb and Focus can silence. Playing it ourselves would talk
-        // over a meeting.
-        content.sound = .default
+        // The sound of the phase that begins, delivered through the notification, which
+        // is the only way to make a noise that Do Not Disturb and Focus can silence.
+        // Playing it ourselves would talk over a meeting.
+        content.sound = FocusSounds.isEnabled
+            ? UNNotificationSound(named: UNNotificationSoundName(FocusSounds.fileName(starting: next)))
+            : nil
         content.interruptionLevel = .active
         return content
     }

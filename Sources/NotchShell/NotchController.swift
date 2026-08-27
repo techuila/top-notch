@@ -58,6 +58,26 @@ public final class NotchController {
             model.setPhase(.expanded)
             model.land(on: pane)
         }
+        syncKey()
+    }
+
+    /// The panel is key exactly while it is open.
+    ///
+    /// Key is what lets the panel own the cursor (see `NotchPointer`) and what lets a
+    /// note take typing without the app activating. Opening steals the keyboard from
+    /// whichever window had it, so closing gives it straight back through the relay.
+    private func syncKey() {
+        guard let panel, let model else { return }
+        if model.phase == .expanded {
+            panel.wantsKey = true
+            if !panel.isKeyWindow { panel.makeKey() }
+        } else {
+            panel.wantsKey = false
+            if panel.isKeyWindow {
+                KeyRelayPanel.handBack(from: panel)
+                NotchPointer.shared.reset()
+            }
+        }
     }
 
     /// Installs an invisible drag destination across a band around the collapsed notch.
@@ -284,6 +304,7 @@ public final class NotchController {
         collapse(to: .idle, animated: false)
         panel?.ignoresMouseEvents = true
         panel?.orderOut(nil)
+        NotchPointer.shared.reset()
     }
 
     private func resume() {
@@ -435,6 +456,7 @@ public final class NotchController {
             closeTask?.cancel()
             closeTask = nil
             withAnimation(Motion.reduced(Motion.morph)) { model.setPhase(.expanded) }
+            syncKey()
             return
         }
 
@@ -452,6 +474,7 @@ public final class NotchController {
         }
 
         withAnimation(Motion.reduced(Motion.slot)) { model.setPhase(target) }
+        syncKey()
     }
 
     private func settleAfterGrace() {
@@ -470,6 +493,7 @@ public final class NotchController {
         } else {
             model.setPhase(phase)
         }
+        syncKey()
     }
 
     // MARK: Scroll wheel

@@ -64,6 +64,7 @@ struct PillView: View {
             .frame(height: Metrics.pillRowHeight)
             .background(Capsule().fill(fill))
             .contentShape(Capsule())
+            .notchPointer()
             .onTapGesture(perform: action)
             .onHover { hovering = $0 }
             .notchAnimation(Motion.tap, value: hovering)

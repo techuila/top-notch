@@ -95,7 +95,9 @@ struct NotchRootView: View {
         )
         .onContinuousHover { phase in
             switch phase {
-            case .active: onHover(true)
+            case .active:
+                onHover(true)
+                NotchPointer.shared.apply()
             case .ended: onHover(false)
             }
         }

@@ -58,8 +58,10 @@ final class NotchPanel: NSPanel {
             defer: false
         )
         isFloatingPanel = true
-        // Only a control that genuinely needs typing, such as a note field, takes key.
-        becomesKeyOnlyIfNeeded = true
+        // The controller makes the panel key for as long as it is open. Key is what buys
+        // the cursor: a window that is not key never gets to set it, and the pointer
+        // over a button would stay whatever the app behind wanted.
+        becomesKeyOnlyIfNeeded = false
         hidesOnDeactivate = false
         level = NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 1)
         collectionBehavior = [
@@ -79,6 +81,46 @@ final class NotchPanel: NSPanel {
         contentView = NotchHitTestView(hitBox: hitBox)
     }
 
+    /// Set by the controller for as long as the panel is open. When it is false the
+    /// panel refuses key outright, which is what lets the relay below give the keyboard
+    /// away: when a key window orders out AppKit re-keys any window of its own app that
+    /// will take it, and this one must not.
+    var wantsKey = false
+
+    override var canBecomeKey: Bool { wantsKey }
+    override var canBecomeMain: Bool { false }
+}
+
+/// Takes key off the notch panel for one turn, so the keyboard goes back to whichever
+/// window had it before the notch opened.
+///
+/// A non-activating panel keeps key until another window takes it or it orders out, and
+/// ordering the notch out would collapse it. This panel is zero-sized, draws nothing, and
+/// exists only to be key for an instant; when it orders out the window server hands the
+/// keyboard back to the frontmost app's window, exactly as it does when Spotlight closes.
+final class KeyRelayPanel: NSPanel {
+    private init() {
+        super.init(
+            contentRect: .zero,
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        isReleasedWhenClosed = false
+        hasShadow = false
+        backgroundColor = .clear
+        collectionBehavior = [.canJoinAllSpaces, .ignoresCycle, .fullScreenAuxiliary]
+    }
+
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
+
+    /// Gives the keyboard back if `panel` currently holds it.
+    static func handBack(from panel: NSWindow) {
+        guard panel.isKeyWindow else { return }
+        panel.makeFirstResponder(nil)
+        let relay = KeyRelayPanel()
+        relay.makeKeyAndOrderFront(nil)
+        relay.orderOut(nil)
+    }
 }

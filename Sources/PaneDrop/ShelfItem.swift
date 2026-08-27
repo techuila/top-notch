@@ -58,6 +58,13 @@ enum ShelfName {
         let clipped = String(base.prefix(max(room, 1)))
         return ext.isEmpty ? clipped : clipped + "." + ext
     }
+
+    /// What an `NSItemProvider` wants in `suggestedName`: the name with its extension
+    /// taken off. The receiving app appends the extension belonging to the type it asked
+    /// for, so handing it the whole filename lands the file as `report.pdf.pdf`.
+    static func suggested(_ name: String) -> String {
+        (name as NSString).deletingPathExtension
+    }
 }
 
 /// The guard on every delete in the app.

@@ -102,7 +102,9 @@ final class DropWellView: NSView {
 
         shelf.ingest(urls: urls)
         for receiver in receivers { receive(receiver, into: shelf) }
-        return !urls.isEmpty || !receivers.isEmpty
+        let landed = !urls.isEmpty || !receivers.isEmpty
+        if landed { NotchHaptics.drop() }
+        return landed
     }
 
     private func accepts(_ sender: any NSDraggingInfo) -> Bool {
@@ -121,11 +123,15 @@ final class DropWellView: NSView {
     /// filename is only known once the source app has produced it.
     func receive(_ receiver: NSFilePromiseReceiver, into shelf: DropShelf) {
         guard let staging = shelf.makeStagingDirectory() else { return }
+        // `@Sendable` is what keeps this closure off the main actor. AppKit calls it on
+        // `promiseQueue`, but a closure written inside a `@MainActor` view inherits that
+        // isolation, and Swift 6 checks the isolation at runtime: without this the first
+        // promise dropped on the notch trips the check and takes the app down.
         receiver.receivePromisedFiles(
             atDestination: staging,
             options: [:],
             operationQueue: promiseQueue
-        ) { url, error in
+        ) { @Sendable url, error in
             guard error == nil else { return }
             Task { @MainActor in shelf.adoptPromisedFile(at: url) }
         }

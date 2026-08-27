@@ -252,9 +252,13 @@ struct FileChip: View {
 
     /// A real file URL. The receiving app sees a genuine file drag and copies it out of
     /// the scratch directory, so Finder, Mail and a browser upload field all behave.
+    ///
+    /// The name handed over goes through `ShelfName.suggested`, which takes the extension
+    /// off: the receiver puts it back, and the full filename would land as
+    /// `report.pdf.pdf`.
     private func provider() -> NSItemProvider {
         let provider = NSItemProvider(contentsOf: item.url) ?? NSItemProvider()
-        provider.suggestedName = item.name
+        provider.suggestedName = ShelfName.suggested(item.name)
         return provider
     }
 
@@ -308,6 +312,7 @@ struct DragAllHandle: View {
             .notchAnimation(Motion.tap, value: hovering)
         }
         .frame(width: 74, height: DropLayout.headerHeight)
+        .notchPointer()
         .accessibilityLabel("Drag every item off the shelf")
     }
 

@@ -63,6 +63,9 @@ final class DropShelf {
     func beginTargeting() {
         onDragRequestsExpand?()
         guard !isTargeted else { return }
+        // The drag has arrived over the notch: the same tick a carried card gets when it
+        // crosses into a slot.
+        NotchHaptics.snap()
         withAnimation(Motion.reduced(Motion.tap)) { isTargeted = true }
     }
 

@@ -205,6 +205,93 @@ left untouched on disk.
 Rejected: locking the entire notes feature behind Touch ID (too much friction); fixing
 the entitlement to keep per-note privacy (not worth it for a scratchpad).
 
+### Quick notes are cards with live markdown - **LOCKED**
+Set 2026-08-27. A note is a card in a two-column grid: title, two lines of body, when it
+was last touched. Pressing a card grows it into the editor and closing the editor shrinks
+it back into the same card (one matched-geometry identity, never a list swapped for a
+form). A new note grows out of the new-note card.
+
+The editor is markdown, the Obsidian way: the line the caret is on shows its syntax and
+every other line shows the result. Headings, bold, italic, strikethrough, inline code,
+bullet and numbered lists and quotes. Return continues a list, Return on an empty item
+ends it. Bold, italic, strikethrough and the two list styles have toolbar buttons and the
+Apple Notes keys (Command-B, Command-I, Shift-Command-X, Shift-Command-7, Shift-Command-9).
+The text on disk is the markdown itself; the view only dresses it (attributes and null
+glyphs, nothing inserted), so offsets, undo and autosave see plain text.
+
+Rejected: a rendered preview mode you toggle into (two modes for one note); a rich text
+editor (the note would stop being a text file).
+
+### Card order belongs to the user - **LOCKED**
+Set 2026-08-27. Dragging a card lifts it off the grid, tilted, and carries it; a dashed
+card-shaped slot marks where it will land. No hold first (owner call, same day): the drag
+itself is the gesture, and a press that does not move is the tap that opens the note. The order is saved (`order.json`
+beside the notes) and editing a note never moves it. New notes go in front.
+
+Superseded: the list used to re-sort on every save so the last edited note came first.
+
+### Pomodoro is focus and break, nothing else - **LOCKED**
+Set 2026-08-27 (owner picked option B of three). Two phases, focus then break then focus.
+No long break, no cycle of four, no session dots, no "Session x of 4". The steppers are
+labelled in words (FOCUS, BREAK) and the switch says "Auto-start next". Under the phase
+title sits "N rounds done today": focus rounds whose deadline passed since midnight, a
+count that only grows and that the day resets. Skip moves on without counting.
+
+Old state restores: a saved short or long break becomes the break, `shortBreakMinutes`
+becomes the break length, the session count is dropped.
+
+Rejected: labelling the existing cycle (still four controls and a counter to explain on
+a 132pt pane); keeping the cycle with skip counting a round (fixes the 1, 2, 1, 2 bounce
+but keeps the long-break control).
+
+### Focus sounds are "Glass", the break is a chime - **LOCKED**
+Set 2026-08-27 (owner picked Glass over Wood and Chime). Two soft sine notes a fifth
+apart, about 350 ms, rising E5 to B5 when Focus starts and falling B5 to E5 when it is
+paused: one voice, two words, the direction is the message. Amended the same day: a break
+beginning is a separate word, a soft chime (one G5 with a quiet bell overtone, gentle
+attack, 0.9 s ring), because a break is a change of state and not a hand on a control.
+Rendered at full scale: the point is to be caught over music, so the files peak at
+0 dBFS and the system volume is the only knob.
+
+When: play on Focus plays the rising Glass; pause plays the falling Glass; play on Break
+plays the chime. A phase running out plays the sound of the phase that begins, delivered
+inside the notification so Do Not Disturb and Focus modes still silence it; without
+notification permission the pane plays it directly. Skip and reset are silent. A "Focus Sounds" switch in the menu bar item
+turns all of it off. The files are rendered by publishing/scripts/render-sounds.swift
+into Resources/Sounds.
+
+Rejected: the generic system notification ding (same as every app, same for both
+directions, and only when notifications were allowed); a bell-like chime (reads as a
+message alert).
+
+### Haptics - **LOCKED**
+Set 2026-08-27. Only things being carried are felt, through one vocabulary in NotchCore
+(`NotchHaptics`). A note card: a level click when it is lifted, an alignment tick each
+time it crosses into a new slot, a generic click when it lands. A file drag: the same
+tick when the drag arrives over the notch, the same click when the files land on the
+shelf. Hovering, pressing, and the notch opening or closing are silent (amended the same
+day: a tick on every button made the app feel busy under the finger). A "Haptics" switch
+in the menu bar item turns all of it off.
+
+### The open notch is the key window - **OPEN**
+Made 2026-08-27 to deliver the pointer-on-hover request; the owner has not yet locked it.
+Every clickable control shows the pointing hand. That is only possible while the panel is
+the key window: a window that is not key never gets to set the cursor (the app behind
+does), and neither `pointerStyle` nor cursor rects work without it. So the shell makes
+the panel key for as long as it is open and hands the keyboard back on close through a
+zero-size relay panel (a non-activating panel keeps key until another window takes it,
+and ordering the notch out would collapse it). The app itself never activates.
+
+Consequence worth knowing: opening the notch takes keyboard focus from the frontmost
+window, exactly as Spotlight does, and closing gives it back.
+
+The cursor goes through one arbiter (`NotchPointer`) because SwiftUI delivers one mouse
+move's hover exits and entries in no fixed order; a control's exit landing after its
+neighbour's entry would otherwise wipe the hand.
+
+Rejected: `NSApp.activate()` (macOS refuses it for a non-activating panel; retrying it
+from a view update was the notes hang).
+
 ### Music visualizer - **LOCKED**
 The waveform is synthesized, not audio-reactive: a deterministic beat clock with onset
 envelopes, asymmetric attack/decay, bass-weighted bars and slow section energy. It runs
@@ -252,6 +339,11 @@ macOS says otherwise.
 
 Rejected: a `LaunchAgent` plist (invisible to the user in System Settings, and orphaned if the
 app is deleted); a separate helper target (a whole extra bundle to sign and ship for one bool).
+
+Only a real `.app` bundle ever registers. `swift run` and the bare binary under `.build` skip
+registration entirely and do not consume the first-launch default. Registering a bare
+executable makes launchd open it through Terminal at every login, and macOS refuses to
+unregister that entry afterwards; it can only be removed by hand from Login Items.
 
 ### Autoupdates - **LOCKED**
 Sparkle 2, checking automatically and installing in the background. The appcast is

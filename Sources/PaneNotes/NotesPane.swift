@@ -10,8 +10,8 @@ import SwiftUI
 public final class NotesPane: NotchPane {
     public let id: PaneID = .notes
 
-    /// The list. Roughly four rows before it scrolls.
-    private static let listHeight: CGFloat = 142
+    /// The cards. Two rows of two before it scrolls.
+    private static let listHeight: CGFloat = 170
     /// The editor. One step taller, and constant while typing so the panel does not
     /// breathe on every keystroke.
     private static let editorHeight: CGFloat = 236

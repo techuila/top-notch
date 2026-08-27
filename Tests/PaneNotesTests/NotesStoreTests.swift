@@ -214,7 +214,7 @@ final class NotesStoreTests: XCTestCase {
         XCTAssertTrue(NoteFileStore(directory: directory).loadAll().isEmpty)
     }
 
-    func testLastEditedNoteSortsFirst() {
+    func testEditingDoesNotMoveACard() {
         let store = makeStore()
         store.newNote()
         store.draft = "first note"
@@ -229,7 +229,29 @@ final class NotesStoreTests: XCTestCase {
         store.draft = "first note, edited"
         store.closeEditor()
 
-        XCTAssertEqual(store.items.first?.title, "first note, edited")
+        XCTAssertEqual(store.items.map(\.title), ["second note", "first note, edited"])
+    }
+
+    func testMoveRearrangesTheCardsAndSurvivesARelaunch() {
+        let store = makeStore()
+        for title in ["a", "b", "c"] {
+            store.newNote()
+            store.draft = title
+            store.closeEditor()
+        }
+        XCTAssertEqual(store.items.map(\.title), ["c", "b", "a"])
+
+        guard let a = store.items.last?.id else { return XCTFail("no note") }
+        store.move(a, to: 0)
+        XCTAssertEqual(store.items.map(\.title), ["a", "c", "b"])
+
+        let relaunched = makeStore()
+        XCTAssertEqual(relaunched.items.map(\.title), ["a", "c", "b"])
+    }
+
+    func testTitleAndPreviewDropTheMarkdown() {
+        XCTAssertEqual(NotesStore.firstLine(of: "# **Big** plans"), "Big plans")
+        XCTAssertEqual(NotesStore.preview(of: "Title\n- oat *milk*\n\n> quoted `code`"), "oat milk quoted code")
     }
 
     func testStaleEncryptedNoteDoesNotAppearAndIsNotLost() throws {

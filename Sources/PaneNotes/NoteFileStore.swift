@@ -32,6 +32,8 @@ struct NoteFileStore {
     let directory: URL
 
     private static let fileExtension = "tnote"
+    /// The user's arrangement of the cards, newest-made first until they drag one.
+    private static let orderFile = "order.json"
 
     init(directory: URL? = nil) {
         if let directory {
@@ -98,6 +100,27 @@ struct NoteFileStore {
             if FileManager.default.fileExists(atPath: url.path) {
                 try FileManager.default.removeItem(at: url)
             }
+        } catch {
+            throw NoteStoreError.storage(error.localizedDescription)
+        }
+    }
+
+    // MARK: Order
+
+    /// The saved card order. Missing or unreadable means "no arrangement yet".
+    func loadOrder() -> [UUID] {
+        let url = directory.appendingPathComponent(Self.orderFile)
+        guard let data = try? Data(contentsOf: url),
+              let ids = try? JSONDecoder().decode([UUID].self, from: data)
+        else { return [] }
+        return ids
+    }
+
+    func writeOrder(_ ids: [UUID]) throws(NoteStoreError) {
+        try prepare()
+        do {
+            let data = try JSONEncoder().encode(ids)
+            try data.write(to: directory.appendingPathComponent(Self.orderFile), options: [.atomic])
         } catch {
             throw NoteStoreError.storage(error.localizedDescription)
         }

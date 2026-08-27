@@ -7,6 +7,8 @@ struct NoteItem: Identifiable, Equatable, Sendable {
     let id: UUID
     var modified: Date
     var title: String
+    /// The body after the title, syntax stripped, for the card.
+    var preview: String
 
     static let untitled = "New note"
 }
@@ -37,6 +39,12 @@ final class NotesStore {
     /// The note the editor is showing, if any. Independent of `mode` so a confirmation
     /// can sit over the editor without collapsing the panel.
     private(set) var editorNoteID: UUID?
+    /// Which card the editor grew out of, so it can grow back into the same one. A note
+    /// opened from its card morphs from that card; a fresh note morphs from the new-note
+    /// card, because that is the one the user pressed.
+    private(set) var editorOrigin: String = ""
+    /// The morph identity of the new-note card.
+    nonisolated static let newCardOrigin = "new"
 
     /// The live editor buffer, for as long as the editor is open.
     var draft: String = "" {
@@ -107,11 +115,39 @@ final class NotesStore {
 
     /// Reads every readable note once, at init. Files from the old encrypted format do
     /// not decode and are left on disk untouched; they simply do not appear in the list.
+    ///
+    /// The cards sit in the order the user arranged them. Anything the arrangement does
+    /// not know about (a note made before arranging existed, or by an older build) goes
+    /// in front, newest first, which is where a new note lands anyway.
     private func load() {
         let loaded = files.loadAll()
         records = Dictionary(loaded.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        order = loaded.map(\.id)
+        let arranged = files.loadOrder().filter { records[$0] != nil }
+        let unarranged = loaded.map(\.id).filter { !arranged.contains($0) }
+        order = unarranged + arranged
         rebuildItems()
+    }
+
+    // MARK: Arrangement
+
+    /// Puts `id` at `index` among the cards. The arrangement is the user's, so it is
+    /// written straight away and editing a note never moves it again.
+    func move(_ id: UUID, to index: Int) {
+        guard let from = order.firstIndex(of: id) else { return }
+        let target = min(max(index, 0), order.count - 1)
+        guard from != target else { return }
+        order.remove(at: from)
+        order.insert(id, at: target)
+        rebuildItems()
+        saveOrder()
+    }
+
+    private func saveOrder() {
+        do {
+            try files.writeOrder(order)
+        } catch {
+            report(error)
+        }
     }
 
     // MARK: Navigation
@@ -120,6 +156,7 @@ final class NotesStore {
         guard let record = records[id] else { return }
         clearFailure()
         setDraft(record.text)
+        editorOrigin = id.uuidString
         editorNoteID = id
         mode = .editing(id)
     }
@@ -139,8 +176,10 @@ final class NotesStore {
             try files.write(record)
             records[id] = record
             order.insert(id, at: 0)
+            saveOrder()
             rebuildItems()
             setDraft("")
+            editorOrigin = Self.newCardOrigin
             editorNoteID = id
             mode = .editing(id)
         } catch {
@@ -206,7 +245,6 @@ final class NotesStore {
         do {
             try files.write(record)
             records[id] = record
-            promote(id)
             rebuildItems()
             clearFailure()
         } catch {
@@ -232,6 +270,7 @@ final class NotesStore {
             try files.delete(id: id)
             records[id] = nil
             order.removeAll { $0 == id }
+            saveOrder()
             if editorNoteID == id {
                 setDraft("")
                 editorNoteID = nil
@@ -246,26 +285,35 @@ final class NotesStore {
 
     // MARK: Items
 
-    private func promote(_ id: UUID) {
-        order.removeAll { $0 == id }
-        order.insert(id, at: 0)
-    }
-
     private func rebuildItems() {
         items = order.compactMap { id in
             guard let record = records[id] else { return nil }
             return NoteItem(
                 id: id,
                 modified: record.modified,
-                title: NotesStore.firstLine(of: record.text)
+                title: NotesStore.firstLine(of: record.text),
+                preview: NotesStore.preview(of: record.text)
             )
         }
     }
 
+    /// The first line, without its markdown, as the title.
     static func firstLine(of text: String) -> String {
-        let line = text.prefix(while: { !$0.isNewline }).trimmingCharacters(in: .whitespaces)
+        let raw = String(text.prefix(while: { !$0.isNewline }))
+        let line = BlockParse.plainText(of: raw).trimmingCharacters(in: .whitespaces)
         guard !line.isEmpty else { return NoteItem.untitled }
         return line.count > 48 ? String(line.prefix(48)) + "\u{2026}" : line
+    }
+
+    /// Everything after the first line, flattened to one run of plain words. Enough for
+    /// two lines on a card; the card clips the rest.
+    static func preview(of text: String) -> String {
+        let lines = text.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline).dropFirst()
+        let words = lines
+            .map { BlockParse.plainText(of: String($0)) }
+            .joined(separator: " ")
+            .split(whereSeparator: \.isWhitespace)
+        return words.prefix(40).joined(separator: " ")
     }
 
     // MARK: Failure plumbing

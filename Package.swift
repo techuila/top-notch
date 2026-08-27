@@ -56,5 +56,10 @@ let package = Package(
             dependencies: ["PaneFocus"],
             swiftSettings: swiftSettings
         ),
+        .testTarget(
+            name: "PaneDropTests",
+            dependencies: ["PaneDrop"],
+            swiftSettings: swiftSettings
+        ),
     ]
 )

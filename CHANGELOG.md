@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.5.0](https://github.com/techuila/top-notch/compare/v0.4.3...v0.5.0) (2026-08-27)
+
+
+### Features
+
+* **core:** pointer hand, haptics vocabulary, hosted text tokens ([8bfc276](https://github.com/techuila/top-notch/commit/8bfc276cfc9e3fbc8865d1774deb39189cb806f5))
+* **drop:** pointer on the drag handle, felt file drops ([3750dfa](https://github.com/techuila/top-notch/commit/3750dfa046ce6d8a271ee41da7e76a3e28725ac4))
+* **focus:** focus and break only, rounds today, glass sounds ([a0c4aac](https://github.com/techuila/top-notch/commit/a0c4aac336472ec68f77e876df838a11f2d309bf))
+* **notes:** card grid, live markdown editor, drag to reorder ([c85c237](https://github.com/techuila/top-notch/commit/c85c2372ab7c3d02cca347bf00db04605b6bb378))
+* **shell:** panel is key while open, keyboard handed back on close ([056a450](https://github.com/techuila/top-notch/commit/056a4509ee4fa67c4c48908cc11dfa80832b6569))
+
+
+### Bug Fixes
+
+* **app:** only a bundled app registers at login ([8bc61e4](https://github.com/techuila/top-notch/commit/8bc61e4aa2f528b49f08fffc57eb100ed96a9902))
+
 ## [0.4.3](https://github.com/techuila/top-notch/compare/v0.4.2...v0.4.3) (2026-08-11)
 
 

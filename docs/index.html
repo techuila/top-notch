@@ -225,11 +225,37 @@
 
                   <section class="tn-pane" data-pane="notes" id="tn-pane-notes"
                            role="tabpanel" aria-labelledby="tn-pill-notes">
-                    <div class="np">
-                      <div class="np-row"><span>Standup notes</span><time>09:12</time></div>
-                      <div class="np-row"><span>Ideas for the drop shelf</span><time>Mon</time></div>
-                      <textarea class="np-scratch" aria-label="Scratch note, not saved anywhere"
-                                placeholder="Type here. This note saves nowhere."></textarea>
+                    <div class="np" id="np" data-open="0">
+                      <div class="np-grid" role="list">
+                        <button class="np-card" role="listitem" data-title="Standup notes" data-body="- ship the drop shelf\n- **review** the release notes\n- ask about the *notch* metrics">
+                          <b>Standup notes</b>
+                          <span>ship the drop shelf review the release notes ask about the notch metrics</span>
+                          <time>2 hours ago</time>
+                        </button>
+                        <button class="np-card" role="listitem" data-title="Ideas for the drop shelf" data-body="# Ideas for the drop shelf\nExpire after a day, ~~a week~~.\n1. thumbnails\n2. drag all">
+                          <b>Ideas for the drop shelf</b>
+                          <span>Expire after a day, a week. thumbnails drag all</span>
+                          <time>Monday</time>
+                        </button>
+                        <button class="np-card np-new" role="listitem" data-title="New note" data-body="">
+                          <b>+</b>
+                          <span>New note</span>
+                        </button>
+                      </div>
+                      <div class="np-editor" hidden>
+                        <div class="np-head">
+                          <button class="tn-btn size-12" id="np-back" aria-label="Back to notes">
+                            <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+                              <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M10 3 5 8l5 5"/>
+                            </svg>
+                          </button>
+                          <b id="np-title">Standup notes</b>
+                          <span class="np-tools" aria-hidden="true"><i>B</i><i class="it">I</i><i class="st">S</i><i>&#8801;</i></span>
+                        </div>
+                        <textarea class="np-scratch" id="np-scratch" aria-label="Scratch note, not saved anywhere"
+                                  placeholder="Markdown. Type here. This note saves nowhere."></textarea>
+                        <span class="np-hint">markdown. esc closes</span>
+                      </div>
                     </div>
                   </section>
 
@@ -248,11 +274,8 @@
                         <span class="fp-clock" id="fp-clock">25:00</span>
                       </div>
                       <div class="fp-details">
-                        <span class="fp-titlerow">
-                          <span class="fp-phase" id="fp-phase">Focus</span>
-                          <span class="fp-dots" aria-hidden="true"><i class="now"></i><i></i><i></i><i></i></span>
-                        </span>
-                        <span class="fp-session">Session 1 of 4</span>
+                        <span class="fp-phase" id="fp-phase">Focus</span>
+                        <span class="fp-session" id="fp-rounds">No rounds done today</span>
                         <div class="fp-controls">
                           <button class="tn-btn size-16" id="fp-toggle" aria-label="Start">
                             <svg class="ico-play" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
@@ -279,6 +302,11 @@
                           </button>
                         </div>
                       </div>
+                    </div>
+                    <div class="fp-bar">
+                      <span class="fp-step" data-phase="0"><em class="on">Focus</em><button class="tn-btn size-10" aria-label="Shorten focus">&minus;</button><b>25</b><button class="tn-btn size-10" aria-label="Lengthen focus">+</button></span>
+                      <span class="fp-step" data-phase="1"><em>Break</em><button class="tn-btn size-10" aria-label="Shorten break">&minus;</button><b>5</b><button class="tn-btn size-10" aria-label="Lengthen break">+</button></span>
+                      <button class="fp-auto" id="fp-auto" aria-pressed="false"><i></i>Auto-start next</button>
                     </div>
                   </section>
 
@@ -332,15 +360,17 @@
         </div>
         <div class="cell">
           <span class="label">Notes</span>
-          <h3>Plain quick notes</h3>
-          <p>A plain scratchpad in the notch. Open it, type, close it. Notes
-            keep themselves saved.</p>
+          <h3>Notes as cards, written in markdown</h3>
+          <p>Every note is a card; press one and it grows into the editor.
+            The line you are on shows its markdown, every other line shows the
+            result. Drag cards to arrange them.</p>
         </div>
         <div class="cell">
           <span class="label">Focus</span>
           <h3>A pomodoro that stays put</h3>
-          <p>A running timer keeps a progress ring and live countdown parked at
-            the far left of the notch, closed or open.</p>
+          <p>Focus, then break, then focus. A running timer keeps a progress
+            ring and live countdown parked at the far left of the notch, closed
+            or open, and a soft glass note marks each start.</p>
         </div>
         <div class="cell">
           <span class="label">Updates</span>

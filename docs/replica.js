@@ -12,7 +12,9 @@
 
   // ---- geometry, mirroring ShellMetrics / Metrics ----
   var PANES = ["music", "drop", "notes", "focus"];
-  var CONTENT_H = { music: 136, drop: 122, notes: 168, focus: 148 };
+  var CONTENT_H = { music: 136, drop: 122, notes: 170, focus: 132 };
+  var NOTES_EDITOR_H = 236;
+  var notesOpen = false;
   var PANE_TOP = 94; /* paneTop 76 + pill breathing room 18 */
   var PANE_BOTTOM = 18;
   var IDLE_H = 44, PROX_H = 47; /* ShellMetrics.idleHeight / proximityHeight */
@@ -42,7 +44,8 @@
     var w, h;
     if (state === "expanded") {
       w = Math.min(EXPANDED_W, screenEl.clientWidth - 16);
-      h = PANE_TOP + CONTENT_H[pane] + PANE_BOTTOM;
+      var content = pane === "notes" && notesOpen ? NOTES_EDITOR_H : CONTENT_H[pane];
+      h = PANE_TOP + content + PANE_BOTTOM;
     } else {
       var pad = state === "proximity" ? PAD_PROX : PAD_IDLE;
       var left = ART + (chipVisible() ? CHIP + SLOT_GAP : 0);
@@ -465,6 +468,9 @@
     fpRing.style.strokeDashoffset = String(RING_C * (1 - remainingFrac));
     chipRing.style.strokeDashoffset = String(CHIP_C * (1 - remainingFrac));
     fpPhase.textContent = PHASES[pomo.phase].name;
+    Array.prototype.forEach.call(document.querySelectorAll(".fp-step em"), function (label, i) {
+      label.classList.toggle("on", i === pomo.phase);
+    });
   }
 
   function pomoAdvance() {
@@ -477,7 +483,16 @@
     var now = performance.now();
     pomo.remaining -= (now - pomo.lastTick) / 1000;
     pomo.lastTick = now;
-    if (pomo.remaining <= 0) pomoAdvance();
+    if (pomo.remaining <= 0) {
+      if (pomo.phase === 0) { rounds += 1; paintRounds(); }
+      pomoAdvance();
+      if (!autoStart) {
+        clearInterval(pomo.timer);
+        pomo.timer = null;
+        pomo.running = false;
+        pomoPaintChrome();
+      }
+    }
     pomoPaint();
   }
 
@@ -515,6 +530,67 @@
     pomo.remaining = pomo.total;
     pomoPaint();
     pomoPaintChrome();
+  });
+
+  // ---- notes: a card grows into the editor, back shrinks it ----
+  var npRoot = document.getElementById("np");
+  var npTitle = document.getElementById("np-title");
+  var npScratch = document.getElementById("np-scratch");
+
+  function openNote(card) {
+    npTitle.textContent = card.dataset.title;
+    npScratch.value = card.dataset.body.replace(/\\n/g, "\n");
+    notesOpen = true;
+    npRoot.dataset.open = "1";
+    applySize();
+    npScratch.focus();
+  }
+
+  function closeNote() {
+    notesOpen = false;
+    npRoot.dataset.open = "0";
+    applySize();
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll(".np-card"), function (card) {
+    card.addEventListener("click", function () { openNote(card); });
+  });
+  document.getElementById("np-back").addEventListener("click", closeNote);
+  npScratch.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") { e.stopPropagation(); closeNote(); }
+  });
+
+  // ---- focus: durations, auto-start, rounds today ----
+  var fpRounds = document.getElementById("fp-rounds");
+  var fpAuto = document.getElementById("fp-auto");
+  var rounds = 0;
+  var autoStart = false;
+
+  function paintRounds() {
+    fpRounds.textContent = rounds === 0 ? "No rounds done today"
+      : rounds === 1 ? "1 round done today" : rounds + " rounds done today";
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll(".fp-step"), function (step) {
+    var idx = Number(step.dataset.phase);
+    var value = step.querySelector("b");
+    var buttons = step.querySelectorAll(".tn-btn");
+    function adjust(delta) {
+      var mins = Math.min(Math.max(PHASES[idx].secs / 60 + delta, 1), idx === 0 ? 90 : 60);
+      PHASES[idx].secs = mins * 60;
+      value.textContent = String(mins);
+      if (!pomo.running && pomo.phase === idx) {
+        pomo.total = pomo.remaining = PHASES[idx].secs;
+        pomoPaint();
+      }
+    }
+    buttons[0].addEventListener("click", function () { adjust(-1); });
+    buttons[1].addEventListener("click", function () { adjust(1); });
+  });
+
+  fpAuto.addEventListener("click", function () {
+    autoStart = !autoStart;
+    fpAuto.setAttribute("aria-pressed", autoStart ? "true" : "false");
   });
 
   // ---- init ----

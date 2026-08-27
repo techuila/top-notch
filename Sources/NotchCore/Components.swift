@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// Shared controls. Panes use these so every button in the app reacts identically.
@@ -47,6 +48,7 @@ public struct NotchButton: View {
             .background(Circle().fill(fill))
             .scaleEffect(pressed ? 0.86 : 1)
             .contentShape(Circle())
+            .notchPointer()
             .onTapGesture(perform: action)
             .onLongPressGesture(minimumDuration: 0, pressing: { pressed = $0 }, perform: {})
             .onHover { hovering = $0 }
@@ -78,8 +80,107 @@ public struct NotchTile<Content: View>: View {
                 RoundedRectangle(cornerRadius: Style.tileRadius, style: .continuous)
                     .fill(hovering && interactive ? Style.fillHover : Style.fill)
             )
+            .modifier(PointerOnHover(enabled: interactive))
             .onHover { hovering = interactive && $0 }
             .notchAnimation(Motion.tap, value: hovering)
+    }
+}
+
+public extension View {
+    /// The pointing hand every clickable control shows on hover. Anything that reacts to
+    /// a tap wears this, so the cursor alone says what is a button and what is not.
+    func notchPointer() -> some View {
+        modifier(PointerOnHover(enabled: true))
+    }
+}
+
+/// Every haptic in TopNotch comes from here, so the whole app speaks one touch
+/// language on a Force Touch trackpad. Only things being carried are felt (owner
+/// decision, 2026-08-27): a click when something is picked up, a tick when it crosses
+/// into a new place, a click when it lands. Hovering and pressing are silent; a tick on
+/// every button made the app feel busy under the finger. Nothing plays when the user
+/// has switched it off.
+@MainActor
+public enum NotchHaptics {
+    private static let key = "notch.haptics"
+
+    public static var isEnabled: Bool {
+        get { UserDefaults.standard.object(forKey: key) as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: key) }
+    }
+
+    /// A card coming off the grid.
+    public static func lift() { perform(.levelChange) }
+    /// A carried thing crossing into a new place: a card into a new slot, a file drag
+    /// arriving over the notch.
+    public static func snap() { perform(.alignment) }
+    /// A carried thing landing: a card in its slot, files on the shelf.
+    public static func drop() { perform(.generic) }
+
+    private static func perform(_ pattern: NSHapticFeedbackManager.FeedbackPattern) {
+        guard isEnabled else { return }
+        NSHapticFeedbackManager.defaultPerformer.perform(pattern, performanceTime: .now)
+    }
+}
+
+/// One arbiter for the cursor. SwiftUI delivers the hover exits and entries caused by
+/// one mouse move in no fixed order, so a control's exit can land after its neighbour's
+/// entry, and "arrow on exit" would wipe the neighbour's hand. Every hovered control
+/// reports in and the cursor follows the count, whichever callback ran last.
+///
+/// The cursor is only ours while the notch panel is the key window, which the shell
+/// arranges whenever the panel is open. `pointerStyle` and cursor rects were tried and
+/// are inert here: both need a key window too, and neither survives the panel's
+/// hover-driven lifecycle.
+@MainActor
+public final class NotchPointer {
+    public static let shared = NotchPointer()
+
+    private var hands = Set<UUID>()
+
+    private init() {}
+
+    fileprivate func enter(_ id: UUID) {
+        hands.insert(id)
+        apply()
+    }
+
+    fileprivate func leave(_ id: UUID) {
+        hands.remove(id)
+        apply()
+    }
+
+    /// Sets the cursor from the current count. The shell also calls this on every pointer
+    /// move over the open panel, so a control that vanished under the pointer without an
+    /// exit cannot leave a stale hand behind.
+    public func apply() {
+        (hands.isEmpty ? NSCursor.arrow : NSCursor.pointingHand).set()
+    }
+
+    /// The panel closed: nothing is hovered any more.
+    public func reset() {
+        hands.removeAll()
+        NSCursor.arrow.set()
+    }
+}
+
+private struct PointerOnHover: ViewModifier {
+    let enabled: Bool
+    @State private var id = UUID()
+    @State private var hovering = false
+
+    func body(content: Content) -> some View {
+        content
+            .onHover { inside in
+                guard enabled, inside != hovering else { return }
+                hovering = inside
+                inside ? NotchPointer.shared.enter(id) : NotchPointer.shared.leave(id)
+            }
+            .onDisappear {
+                guard hovering else { return }
+                hovering = false
+                NotchPointer.shared.leave(id)
+            }
     }
 }
 

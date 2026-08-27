@@ -57,6 +57,8 @@ public enum Style {
     public static let subtitle = Font.system(size: 12, weight: .regular)
     /// Body copy inside notes and lists.
     public static let body = Font.system(size: 12.5, weight: .regular)
+    /// Small secondary text that is still prose: a card's preview lines, a date.
+    public static let caption = Font.system(size: 10.5, weight: .regular)
     /// Uppercase section labels. Apply `.tracking(1.2)` and `.textCase(.uppercase)`.
     public static let label = Font.system(size: 9, weight: .semibold, design: .monospaced)
     /// Anything with digits that must not jitter: timers, elapsed time, counters.
@@ -83,12 +85,28 @@ public enum Style {
     public enum Hosted {
         /// Pairs with `Style.body`.
         public static let body = NSFont.systemFont(ofSize: 12.5, weight: .regular)
+        /// Inline code inside a note. Same size as `body` so a code span does not change
+        /// the line height around it.
+        public static let code = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        /// Markdown headings. Level 1 pairs with `Style.title`; the others step down
+        /// towards `body` so a note with three heading levels still reads as one scale.
+        public static func heading(_ level: Int) -> NSFont {
+            switch level {
+            case 1:  NSFont.systemFont(ofSize: 15, weight: .semibold)
+            case 2:  NSFont.systemFont(ofSize: 13.5, weight: .semibold)
+            default: NSFont.systemFont(ofSize: 12.5, weight: .semibold)
+            }
+        }
         /// Pairs with `Style.ink`.
         public static let ink = NSColor(red: 0.94, green: 0.93, blue: 0.90, alpha: 1)
         /// Pairs with `Style.inkMuted`.
         public static let inkMuted = ink.withAlphaComponent(0.58)
         /// Pairs with `Style.inkFaint`.
         public static let inkFaint = ink.withAlphaComponent(0.45)
+        /// Pairs with `Style.fill`.
+        public static let fill = ink.withAlphaComponent(0.07)
+        /// Pairs with `Style.notesAccent`.
+        public static let notesAccent = NSColor(red: 1.00, green: 0.68, blue: 0.44, alpha: 1)
     }
 }
 
